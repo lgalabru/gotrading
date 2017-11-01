@@ -7,7 +7,11 @@ import (
 	"github.com/thrasher-/gocryptotrader/exchanges/ticker"
 )
 
-type Exchange interface {
+type Exchange struct {
+	Name string
+}
+
+type ExchangeInterface interface {
 	Setup(exch config.ExchangeConfig)
 	Start()
 	SetDefaults()
