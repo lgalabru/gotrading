@@ -1,7 +1,6 @@
 package core
 
 type CurrencyPair struct {
-	From      Currency
-	To        Currency
-	Delimiter string
+	From Currency
+	To   Currency
 }

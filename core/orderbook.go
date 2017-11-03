@@ -1,7 +1,8 @@
 package core
 
 type Orderbook struct {
-	Id string
+	CurrencyPair CurrencyPair
+	Order        Order
 }
 
 // type Orderbook struct {

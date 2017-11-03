@@ -1,14 +1,14 @@
 package core
 
-type orderType uint
+type OrderType uint
 
 const (
-	buy orderType = iota
-	sell
+	Buy OrderType = iota
+	Sell
 )
 
 type Order struct {
-	Type   orderType
-	Volume float64
 	Price  float64
+	Volume float64
+	Type   OrderType
 }
