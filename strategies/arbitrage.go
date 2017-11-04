@@ -2,6 +2,7 @@ package strategies
 
 import (
 	"fmt"
+	"strings"
 
 	"gotrading/core"
 )
@@ -22,48 +23,79 @@ type path struct {
 	nodes []node
 }
 
-func (arbitrage *Arbitrage) Run(mashup core.ExchangeMashup, depth uint, threshold float64, startingCurrency core.Currency) {
+func (arbitrage *Arbitrage) Run(mashup core.ExchangeMashup, depth int, threshold float64, startingCurrency core.Currency) {
 	var paths []path
 	from := startingCurrency
-	for to, _ := range mashup.Currencies {
+	for _, to := range mashup.Currencies {
 		if to != from {
-			for exch, _ := range mashup.Exchanges {
+			for _, exch := range mashup.Exchanges {
 				n := nodeFromOrderbook(from, to, exch, mashup)
 				if n != nil {
-					paths = append(findPaths(mashup, depth-1, path{[]node{*n}}), paths...)
+					paths = append(findPaths(mashup, depth, path{[]node{*n}}), paths...)
 				}
 			}
 		}
 	}
+
+	// Pour chaque noeud, on regarde les bids / asks du orderbook
 	for _, p := range paths {
-		p.display()
+		performance := float64(1)
+		for _, n := range p.nodes {
+			var factor float64
+			if n.inverted {
+				factor = 1 / n.orderbook.Order.Price
+			} else {
+				factor = n.orderbook.Order.Price
+			}
+			performance = performance * factor
+
+			// if n.inverted {
+			// } else {
+			// }
+		}
+
+		fmt.Println(p.description(), performance)
 	}
+
 	fmt.Println(len(paths))
 }
 
-func findPaths(m core.ExchangeMashup, depthLeft uint, p path) []path {
+func findPaths(m core.ExchangeMashup, depth int, p path) []path {
 	var paths []path
-	if depthLeft == 0 {
-		return []path{p}
-	} else {
-		from := p.nodes[len(p.nodes)-1].to
-		recursion := func(from core.Currency, to core.Currency) {
-			for exch, _ := range m.Exchanges {
-				n := nodeFromOrderbook(from, to, exch, m)
-				if n != nil && p.contains(*n) == false {
-					p.nodes = append(p.nodes, *n)
-					r := findPaths(m, depthLeft-1, p)
-					paths = append(r, paths...)
-				}
-			}
-		}
-		if depthLeft == 1 {
-			to := p.nodes[0].from
-			recursion(from, to)
+	lastNode := p.nodes[len(p.nodes)-1]
+	if len(p.nodes) == depth {
+		var from core.Currency
+		var to core.Currency
+		if lastNode.inverted {
+			to = lastNode.from
 		} else {
-			for to, _ := range m.Currencies {
-				if to != from {
-					recursion(from, to)
+			to = lastNode.to
+		}
+		if p.nodes[0].inverted {
+			from = p.nodes[0].to
+		} else {
+			from = p.nodes[0].from
+		}
+		if to == from {
+			return []path{p}
+		}
+	} else if len(p.nodes) < depth {
+		var from core.Currency
+		if lastNode.inverted {
+			from = lastNode.from
+		} else {
+			from = lastNode.to
+		}
+		for _, to := range m.Currencies {
+			if to != from {
+				for _, exch := range m.Exchanges {
+					n := nodeFromOrderbook(from, to, exch, m)
+					if n != nil {
+						if p.contains(*n) == false && len(p.nodes) < depth {
+							r := findPaths(m, depth, path{append(p.nodes, *n)})
+							paths = append(r, paths...)
+						}
+					}
 				}
 			}
 		}
@@ -88,7 +120,7 @@ func nodeFromOrderbook(from core.Currency, to core.Currency, exchange core.Excha
 func (p path) contains(n node) bool {
 	found := false
 	for _, m := range p.nodes {
-		found = (n == m)
+		found = n.isEqual(m)
 	}
 	return found
 }
@@ -97,14 +129,33 @@ func (n node) display() {
 	fmt.Println(n.description())
 }
 
-func (n node) description() string {
-	return string(n.from) + "_" + string(n.to) + " (" + n.exch.Name + " - " + n.orderbook.Id + ")"
+func (n node) isEqual(m node) bool {
+	f := (strings.Compare(string(n.from), string(m.from)) == 0)
+	t := (strings.Compare(string(n.to), string(m.to)) == 0)
+	fi := (strings.Compare(string(n.to), string(m.from)) == 0)
+	ti := (strings.Compare(string(n.from), string(m.to)) == 0)
+	e := (strings.Compare(n.exch.Name, m.exch.Name) == 0)
+	return f && t && e || fi && ti && e
 }
 
-func (p path) display() {
+func (n node) description() string {
+	var str string
+	if n.inverted {
+		str = string(n.from) + " <- " + string(n.to) + " (" + n.exch.Name + ")"
+	} else {
+		str = string(n.from) + " -> " + string(n.to) + " (" + n.exch.Name + ")"
+	}
+	return str
+}
+
+func (p path) description() string {
 	str := ""
 	for _, n := range p.nodes {
 		str += n.description() + " /"
 	}
-	fmt.Println(str)
+	return str
+}
+
+func (p path) display() {
+	fmt.Println(p.description())
 }

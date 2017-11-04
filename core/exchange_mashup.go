@@ -1,7 +1,5 @@
 package core
 
-import "fmt"
-
 type ExchangeMashup struct {
 	Currencies       []Currency
 	Exchanges        []Exchange
@@ -33,11 +31,9 @@ func (mashup *ExchangeMashup) Init(currencies []Currency, exchanges []Exchange) 
 }
 
 func (mashup *ExchangeMashup) AddOrderbook(o Orderbook, exchange Exchange) {
-	fmt.Println("Inserting item at", mashup.CurrenciesLookup[o.CurrencyPair.From], mashup.CurrenciesLookup[o.CurrencyPair.To])
 	mashup.Orderbooks[mashup.CurrenciesLookup[o.CurrencyPair.From]][mashup.CurrenciesLookup[o.CurrencyPair.To]][mashup.ExchangesLookup[exchange]] = &o
 }
 
 func (mashup *ExchangeMashup) GetOrderbook(from Currency, to Currency, exchange Exchange) *Orderbook {
-	fmt.Println("Looking for item at", mashup.CurrenciesLookup[from], mashup.CurrenciesLookup[to], exchange.Name)
 	return mashup.Orderbooks[mashup.CurrenciesLookup[from]][mashup.CurrenciesLookup[to]][mashup.ExchangesLookup[exchange]]
 }
