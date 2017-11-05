@@ -4,7 +4,7 @@ import "fmt"
 
 type Portfolio struct {
 	Currencies map[Currency]int
-	Exchanges  map[Exchange]int
+	Exchanges  map[*Exchange]int
 	Balances   [][]float64
 }
 
@@ -14,9 +14,9 @@ func (p *Portfolio) Init(currencies []Currency, exchanges []Exchange) {
 		p.Currencies[curr] = i
 	}
 
-	p.Exchanges = make(map[Exchange]int, len(exchanges))
+	p.Exchanges = make(map[*Exchange]int, len(exchanges))
 	for i, exch := range exchanges {
-		p.Exchanges[exch] = i
+		p.Exchanges[&exch] = i
 	}
 
 	p.Balances = make([][]float64, len(currencies))
@@ -45,13 +45,13 @@ func (p *Portfolio) Bid(order Order, volume float64, pair CurrencyPair, exchange
 }
 
 func (p *Portfolio) DidSold(price float64, volume float64, pair CurrencyPair, exchange Exchange) {
-	p.Balances[p.Currencies[pair.From]][p.Exchanges[exchange]] -= volume
-	p.Balances[p.Currencies[pair.To]][p.Exchanges[exchange]] += (volume * price)
+	p.Balances[p.Currencies[pair.From]][p.Exchanges[&exchange]] -= volume
+	p.Balances[p.Currencies[pair.To]][p.Exchanges[&exchange]] += (volume * price)
 }
 
 func (p *Portfolio) DidBuy(price float64, volume float64, pair CurrencyPair, exchange Exchange) {
-	p.Balances[p.Currencies[pair.From]][p.Exchanges[exchange]] += volume
-	p.Balances[p.Currencies[pair.To]][p.Exchanges[exchange]] -= (volume * price)
+	p.Balances[p.Currencies[pair.From]][p.Exchanges[&exchange]] += volume
+	p.Balances[p.Currencies[pair.To]][p.Exchanges[&exchange]] -= (volume * price)
 }
 
 func (p *Portfolio) DisplayBalances() {

@@ -4,36 +4,50 @@ type ExchangeMashup struct {
 	Currencies       []Currency
 	Exchanges        []Exchange
 	CurrenciesLookup map[Currency]int
-	ExchangesLookup  map[Exchange]int
-	Orderbooks       [][][]*Orderbook
+	ExchangesLookup  map[*Exchange]int
+	Links            [][][]bool
 }
 
-func (mashup *ExchangeMashup) Init(currencies []Currency, exchanges []Exchange) {
-	mashup.Currencies = currencies
-	mashup.CurrenciesLookup = make(map[Currency]int, len(currencies))
-	for i, curr := range currencies {
-		mashup.CurrenciesLookup[curr] = i
-	}
+func (m *ExchangeMashup) Init(exchanges []Exchange) {
+	m.CurrenciesLookup = make(map[Currency]int)
+	m.Currencies = make([]Currency, 0)
+	m.Exchanges = exchanges
+	m.ExchangesLookup = make(map[*Exchange]int, len(exchanges))
 
-	mashup.Exchanges = exchanges
-	mashup.ExchangesLookup = make(map[Exchange]int, len(exchanges))
 	for i, exch := range exchanges {
-		mashup.ExchangesLookup[exch] = i
+		for _, pair := range exch.AvailablePairs {
+
+			_, ok := m.CurrenciesLookup[pair.From]
+			if !ok {
+				m.Currencies = append(m.Currencies, pair.From)
+				m.CurrenciesLookup[pair.From] = len(m.Currencies) - 1
+			}
+			_, ok = m.CurrenciesLookup[pair.To]
+			if !ok {
+				m.Currencies = append(m.Currencies, pair.To)
+				m.CurrenciesLookup[pair.To] = len(m.Currencies) - 1
+
+			}
+		}
+		m.ExchangesLookup[&exch] = i
 	}
 
-	mashup.Orderbooks = make([][][]*Orderbook, len(currencies))
-	for i, _ := range currencies {
-		mashup.Orderbooks[i] = make([][]*Orderbook, len(currencies))
-		for j, _ := range currencies {
-			mashup.Orderbooks[i][j] = make([]*Orderbook, len(exchanges))
+	m.Links = make([][][]bool, len(m.Currencies))
+	for i, _ := range m.Currencies {
+		m.Links[i] = make([][]bool, len(m.Currencies))
+		for j, _ := range m.Currencies {
+			m.Links[i][j] = make([]bool, len(exchanges))
+		}
+	}
+
+	for _, exch := range exchanges {
+		for _, pair := range exch.AvailablePairs {
+			m.Links[m.CurrenciesLookup[pair.From]][m.CurrenciesLookup[pair.To]][m.ExchangesLookup[&exch]] = true
 		}
 	}
 }
 
-func (mashup *ExchangeMashup) AddOrderbook(o Orderbook, exchange Exchange) {
-	mashup.Orderbooks[mashup.CurrenciesLookup[o.CurrencyPair.From]][mashup.CurrenciesLookup[o.CurrencyPair.To]][mashup.ExchangesLookup[exchange]] = &o
-}
-
-func (mashup *ExchangeMashup) GetOrderbook(from Currency, to Currency, exchange Exchange) *Orderbook {
-	return mashup.Orderbooks[mashup.CurrenciesLookup[from]][mashup.CurrenciesLookup[to]][mashup.ExchangesLookup[exchange]]
+func (m *ExchangeMashup) LinkExist(from Currency, to Currency, exchange Exchange) bool {
+	ok := m.Links[m.CurrenciesLookup[from]][m.CurrenciesLookup[to]][m.ExchangesLookup[&exchange]]
+	return ok
 }
