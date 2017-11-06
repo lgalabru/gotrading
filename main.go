@@ -4,17 +4,17 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"time"
 
 	"gotrading/core"
+	"gotrading/exchanges/orderbook"
 	"gotrading/graph"
 
 	"github.com/thrasher-/gocryptotrader/config"
 	"github.com/thrasher-/gocryptotrader/currency/pair"
 	"github.com/thrasher-/gocryptotrader/exchanges/kraken"
 	"github.com/thrasher-/gocryptotrader/exchanges/liqui"
-	"github.com/thrasher-/gocryptotrader/exchanges/orderbook"
 	"github.com/thrasher-/gocryptotrader/exchanges/poloniex"
-	"github.com/thrasher-/gocryptotrader/exchanges/ticker"
 )
 
 func main() {
@@ -45,11 +45,14 @@ func main() {
 
 	// portfolio.DidSold(0, 10, core.CurrencyPair{core.Currency("BTC"), core.Currency("USD")}, core.Exchange{"Alpha"})
 	// portfolio.DisplayBalances()
+	krakenEngine := new(kraken.Kraken)
+	poloniexEngine := new(poloniex.Poloniex)
+	liquiEngine := new(liqui.Liqui)
 
-	kraken := LoadExchange(cfg, "Kraken", new(kraken.Kraken))
-	poloniex := LoadExchange(cfg, "Poloniex", new(poloniex.Poloniex))
-	liqui := LoadExchange(cfg, "Liqui", new(liqui.Liqui))
-	exchanges := []core.Exchange{kraken, poloniex, liqui}
+	kraken := LoadExchange(cfg, "Kraken", krakenEngine)
+	poloniex := LoadExchange(cfg, "Poloniex", poloniexEngine)
+	liqui := LoadExchange(cfg, "Liqui", liquiEngine)
+	exchanges := []core.Exchange{poloniex, liqui, kraken}
 
 	mashup := core.ExchangeMashup{}
 	mashup.Init(exchanges)
@@ -69,89 +72,55 @@ func main() {
 				paths = make([]graph.Path, 0)
 			}
 			pathsLookup[node.ID()] = append(paths, path)
+			// fmt.Println(path.Description())
 		}
 	}
 	fmt.Println("Observing", len(paths), "combinations, distributed over", len(nodes), "pairs.")
 
 	pairsLookup := make(map[string][]graph.NodeLookup)
-	op := 0
 	for _, n := range nodes {
 		paths := pathsLookup[n.ID()]
 		lookups, ok := pairsLookup[n.Exchange.Name]
 		if !ok {
 			lookups = make([]graph.NodeLookup, 0)
-			op += 1
 		}
 		lookup := graph.NodeLookup{n, len(paths)}
 		pairsLookup[n.Exchange.Name] = append(lookups, lookup)
-
 	}
-	fmt.Println(op)
 
 	for _, exch := range exchanges {
 		pairsLookup[exch.Name] = graph.MergeSort(pairsLookup[exch.Name])
-		fmt.Println("Merge sorting", exch.Name, len(pairsLookup[exch.Name]))
-		for _, nodeLookup := range pairsLookup[exch.Name] {
-			fmt.Println(nodeLookup)
+	}
+
+	for _, exch := range exchanges {
+		sortedNodes := pairsLookup[exch.Name]
+		for i, n := range sortedNodes {
+			if i > 5 {
+				break
+			}
+			cp := pair.NewCurrencyPair(string(n.Node.From), string(n.Node.To))
+
+			base := orderbook.Base{
+				Pair:         cp,
+				CurrencyPair: cp.Pair().String(),
+				Asks:         []orderbook.Item{orderbook.Item{Price: 0, Amount: 0}},
+				Bids:         []orderbook.Item{orderbook.Item{Price: 0, Amount: 0}},
+			}
+
+			o1 := orderbook.CreateNewOrderbook(exch.Name, cp, base, orderbook.Spot)
+			fmt.Println(o1.Orderbook)
+			o, err := exch.Engine.UpdateOrderbook(cp, "SPOT")
+			if err != nil {
+				fmt.Println(o)
+			}
+			time.Sleep(10000 * time.Millisecond)
 		}
 	}
-
-	// [–]
-
-	// combinationsLookup := make(map[*core.Exchange][]graph.Path)
-	// pairsLookup: Exchange => [] sorted pairs,
-	// pathsLookup: Node => [] sorted paths,
-	// sortedNodes:= make([]graph.NodeLookup, len(nodes))
-
-	// On souhaite obtenir les Pairs
-
-	// for k, v := range pathsLookup {
-	// 	fmt.Println(k, len(v))
-	// }
-
-	for _, p := range pathsLookup["XID-ETH@Liqui"] {
-		p.Display()
-	}
-
-	// fmt.Println(pathsLookup["XIDETHLiqui"])
-
-	// cascading := []
-	// reverseLookup[node] -> path
-
-	// c1 := pair.NewCurrencyPair("BTC", "USD")
-	// base := orderbook.Base{
-	// 	Pair:         c1,
-	// 	CurrencyPair: c1.Pair().String(),
-	// 	Asks:         []orderbook.Item{orderbook.Item{Price: 100, Amount: 10}},
-	// 	Bids:         []orderbook.Item{orderbook.Item{Price: 200, Amount: 10}},
-	// }
-
-	// o1 := orderbook.CreateNewOrderbook("Kraken", c1, base, orderbook.Spot)
-	// fmt.Println(o1.Orderbook)
-	// o, err := krakenExchange.UpdateOrderbook(rawKrakenPairs[0], "SPOT")
-	// if err != nil {
-	// 	fmt.Println(o)
-	// }
 
 	<-interrupt
 }
 
-type ExchangeInterface interface {
-	Setup(exch config.ExchangeConfig)
-	Start()
-	SetDefaults()
-	GetName() string
-	IsEnabled() bool
-	GetTickerPrice(currency pair.CurrencyPair, assetType string) (ticker.Price, error)
-	UpdateTicker(currency pair.CurrencyPair, assetType string) (ticker.Price, error)
-	GetOrderbookEx(currency pair.CurrencyPair, assetType string) (orderbook.Base, error)
-	UpdateOrderbook(currency pair.CurrencyPair, assetType string) (orderbook.Base, error)
-	GetEnabledCurrencies() []pair.CurrencyPair
-	GetAuthenticatedAPISupport() bool
-	GetAvailableCurrencies() []pair.CurrencyPair
-}
-
-func LoadExchange(cfg *config.Config, name string, exch ExchangeInterface) core.Exchange {
+func LoadExchange(cfg *config.Config, name string, exch core.ExchangeInterface) core.Exchange {
 	config, _ := cfg.GetExchangeConfig(name)
 	exch.SetDefaults()
 	exch.Setup(config)
@@ -162,5 +131,5 @@ func LoadExchange(cfg *config.Config, name string, exch ExchangeInterface) core.
 			core.Currency(c.GetFirstCurrency()),
 			core.Currency(c.GetSecondCurrency())}
 	}
-	return core.Exchange{name, pairs}
+	return core.Exchange{name, pairs, exch}
 }
