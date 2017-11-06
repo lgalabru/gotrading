@@ -1,31 +1,17 @@
 package graph
 
 import (
-	"fmt"
-	"strings"
-
 	"gotrading/core"
 )
 
-type node struct {
-	from     core.Currency
-	to       core.Currency
-	exch     core.Exchange
-	inverted bool
-}
-
-type path struct {
-	nodes []node
-}
-
-func PathFinder(mashup core.ExchangeMashup, from core.Currency, to core.Currency, depth int) []path {
-	var paths []path
+func PathFinder(mashup core.ExchangeMashup, from core.Currency, to core.Currency, depth int) []Path {
+	var paths []Path
 	for _, to := range mashup.Currencies {
 		if to != from {
 			for _, exch := range mashup.Exchanges {
 				n := nodeFromMashup(from, to, exch, mashup)
 				if n != nil {
-					paths = append(findPaths(mashup, depth, path{[]node{*n}}), paths...)
+					paths = append(findPaths(mashup, depth, Path{[]Node{*n}}), paths...)
 				}
 			}
 		}
@@ -33,39 +19,39 @@ func PathFinder(mashup core.ExchangeMashup, from core.Currency, to core.Currency
 	return paths
 }
 
-func findPaths(m core.ExchangeMashup, depth int, p path) []path {
-	var paths []path
-	lastNode := p.nodes[len(p.nodes)-1]
-	if len(p.nodes) == depth {
+func findPaths(m core.ExchangeMashup, depth int, p Path) []Path {
+	var paths []Path
+	lastNode := p.Nodes[len(p.Nodes)-1]
+	if len(p.Nodes) == depth {
 		var from core.Currency
 		var to core.Currency
-		if lastNode.inverted {
-			to = lastNode.from
+		if lastNode.Inverted {
+			to = lastNode.From
 		} else {
-			to = lastNode.to
+			to = lastNode.To
 		}
-		if p.nodes[0].inverted {
-			from = p.nodes[0].to
+		if p.Nodes[0].Inverted {
+			from = p.Nodes[0].To
 		} else {
-			from = p.nodes[0].from
+			from = p.Nodes[0].From
 		}
 		if to == from {
-			return []path{p}
+			return []Path{p}
 		}
-	} else if len(p.nodes) < depth {
+	} else if len(p.Nodes) < depth {
 		var from core.Currency
-		if lastNode.inverted {
-			from = lastNode.from
+		if lastNode.Inverted {
+			from = lastNode.From
 		} else {
-			from = lastNode.to
+			from = lastNode.To
 		}
 		for _, to := range m.Currencies {
 			if to != from {
 				for _, exch := range m.Exchanges {
 					n := nodeFromMashup(from, to, exch, m)
 					if n != nil {
-						if p.contains(*n) == false && len(p.nodes) < depth {
-							r := findPaths(m, depth, path{append(p.nodes, *n)})
+						if p.contains(*n) == false && len(p.Nodes) < depth {
+							r := findPaths(m, depth, Path{append(p.Nodes, *n)})
 							paths = append(r, paths...)
 						}
 					}
@@ -76,59 +62,16 @@ func findPaths(m core.ExchangeMashup, depth int, p path) []path {
 	return paths
 }
 
-func nodeFromMashup(from core.Currency, to core.Currency, exchange core.Exchange, mashup core.ExchangeMashup) *node {
-	var n *node = nil
+func nodeFromMashup(from core.Currency, to core.Currency, exchange core.Exchange, mashup core.ExchangeMashup) *Node {
+	var n *Node = nil
 	ok := mashup.LinkExist(from, to, exchange)
 	if ok {
-		n = &node{from, to, exchange, false}
+		n = &Node{from, to, exchange, false}
 	} else {
 		ok := mashup.LinkExist(to, from, exchange)
 		if ok {
-			n = &node{to, from, exchange, true}
+			n = &Node{to, from, exchange, true}
 		}
 	}
 	return n
-}
-
-func (p path) contains(n node) bool {
-	found := false
-	for _, m := range p.nodes {
-		found = n.isEqual(m)
-	}
-	return found
-}
-
-func (n node) display() {
-	fmt.Println(n.description())
-}
-
-func (n node) isEqual(m node) bool {
-	f := (strings.Compare(string(n.from), string(m.from)) == 0)
-	t := (strings.Compare(string(n.to), string(m.to)) == 0)
-	fi := (strings.Compare(string(n.to), string(m.from)) == 0)
-	ti := (strings.Compare(string(n.from), string(m.to)) == 0)
-	e := (strings.Compare(n.exch.Name, m.exch.Name) == 0)
-	return f && t && e || fi && ti && e
-}
-
-func (n node) description() string {
-	var str string
-	if n.inverted {
-		str = string(n.from) + " <- " + string(n.to) + " (" + n.exch.Name + ")"
-	} else {
-		str = string(n.from) + " -> " + string(n.to) + " (" + n.exch.Name + ")"
-	}
-	return str
-}
-
-func (p path) description() string {
-	str := ""
-	for _, n := range p.nodes {
-		str += n.description() + " /"
-	}
-	return str
-}
-
-func (p path) Display() {
-	fmt.Println(p.description())
 }

@@ -8,14 +8,13 @@ import (
 	"gotrading/core"
 	"gotrading/graph"
 
+	"github.com/thrasher-/gocryptotrader/config"
 	"github.com/thrasher-/gocryptotrader/currency/pair"
 	"github.com/thrasher-/gocryptotrader/exchanges/kraken"
 	"github.com/thrasher-/gocryptotrader/exchanges/liqui"
 	"github.com/thrasher-/gocryptotrader/exchanges/orderbook"
 	"github.com/thrasher-/gocryptotrader/exchanges/poloniex"
 	"github.com/thrasher-/gocryptotrader/exchanges/ticker"
-
-	"github.com/thrasher-/gocryptotrader/config"
 )
 
 func main() {
@@ -28,8 +27,6 @@ func main() {
 
 	interrupt := make(chan os.Signal, 1)
 
-	// currencies := []core.Currency{"USD", "BTC", "ETH", "ETC"} //strings.Split(cfg.Cryptocurrencies, ",")
-
 	// portfolio := core.Portfolio{}
 	// portfolio.Init(currencies, exchanges)
 	// portfolio.DidBuy(0, 7000, core.CurrencyPair{core.Currency("USD"), core.Currency("USD")}, core.Exchange{"Alpha"})
@@ -39,8 +36,6 @@ func main() {
 	//
 	// order2 := core.Order{8000, 1, core.Buy}
 	// portfolio.Fullfill(order2, 1, currencyPair, core.Exchange{"Alpha"})
-
-	// krakenExchange.Start()
 
 	// BTC/USD: 6950
 	// ETH/USD: 280
@@ -64,7 +59,64 @@ func main() {
 	depth := 3
 	paths := graph.PathFinder(mashup, from, to, depth)
 
-	fmt.Println("Observing", len(paths), "combinations.")
+	nodes := make([]graph.Node, 0)
+	pathsLookup := make(map[string][]graph.Path)
+	for _, path := range paths {
+		for _, node := range path.Nodes {
+			paths, ok := pathsLookup[node.ID()]
+			if !ok {
+				nodes = append(nodes, node)
+				paths = make([]graph.Path, 0)
+			}
+			pathsLookup[node.ID()] = append(paths, path)
+		}
+	}
+	fmt.Println("Observing", len(paths), "combinations, distributed over", len(nodes), "pairs.")
+
+	pairsLookup := make(map[string][]graph.NodeLookup)
+	op := 0
+	for _, n := range nodes {
+		paths := pathsLookup[n.ID()]
+		lookups, ok := pairsLookup[n.Exchange.Name]
+		if !ok {
+			lookups = make([]graph.NodeLookup, 0)
+			op += 1
+		}
+		lookup := graph.NodeLookup{n, len(paths)}
+		pairsLookup[n.Exchange.Name] = append(lookups, lookup)
+
+	}
+	fmt.Println(op)
+
+	for _, exch := range exchanges {
+		pairsLookup[exch.Name] = graph.MergeSort(pairsLookup[exch.Name])
+		fmt.Println("Merge sorting", exch.Name, len(pairsLookup[exch.Name]))
+		for _, nodeLookup := range pairsLookup[exch.Name] {
+			fmt.Println(nodeLookup)
+		}
+	}
+
+	// [–]
+
+	// combinationsLookup := make(map[*core.Exchange][]graph.Path)
+	// pairsLookup: Exchange => [] sorted pairs,
+	// pathsLookup: Node => [] sorted paths,
+	// sortedNodes:= make([]graph.NodeLookup, len(nodes))
+
+	// On souhaite obtenir les Pairs
+
+	// for k, v := range pathsLookup {
+	// 	fmt.Println(k, len(v))
+	// }
+
+	for _, p := range pathsLookup["XID-ETH@Liqui"] {
+		p.Display()
+	}
+
+	// fmt.Println(pathsLookup["XIDETHLiqui"])
+
+	// cascading := []
+	// reverseLookup[node] -> path
 
 	// c1 := pair.NewCurrencyPair("BTC", "USD")
 	// base := orderbook.Base{
