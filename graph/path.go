@@ -3,21 +3,21 @@ package graph
 import "fmt"
 
 type Path struct {
-	Nodes []Node
+	ContextualNodes []*ContextualNode
 }
 
-func (p Path) contains(n Node) bool {
+func (p Path) contains(n ContextualNode) bool {
 	found := false
-	for _, m := range p.Nodes {
-		found = n.isEqual(m)
+	for _, m := range p.ContextualNodes {
+		found = n.isEqual(*m)
 	}
 	return found
 }
 
 func (p Path) Description() string {
 	str := ""
-	for _, n := range p.Nodes {
-		str += n.Description() + " /"
+	for _, n := range p.ContextualNodes {
+		str += n.Description() + " "
 	}
 	return str
 }

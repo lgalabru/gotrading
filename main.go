@@ -7,14 +7,12 @@ import (
 	"time"
 
 	"gotrading/core"
-	"gotrading/exchanges/orderbook"
 	"gotrading/graph"
+	"gotrading/strategies"
 
 	"github.com/thrasher-/gocryptotrader/config"
 	"github.com/thrasher-/gocryptotrader/currency/pair"
 	"github.com/thrasher-/gocryptotrader/exchanges/kraken"
-	"github.com/thrasher-/gocryptotrader/exchanges/liqui"
-	"github.com/thrasher-/gocryptotrader/exchanges/poloniex"
 )
 
 func main() {
@@ -46,32 +44,33 @@ func main() {
 	// portfolio.DidSold(0, 10, core.CurrencyPair{core.Currency("BTC"), core.Currency("USD")}, core.Exchange{"Alpha"})
 	// portfolio.DisplayBalances()
 	krakenEngine := new(kraken.Kraken)
-	poloniexEngine := new(poloniex.Poloniex)
-	liquiEngine := new(liqui.Liqui)
+	// poloniexEngine := new(poloniex.Poloniex)
+	// liquiEngine := new(liqui.Liqui)
 
 	kraken := LoadExchange(cfg, "Kraken", krakenEngine)
-	poloniex := LoadExchange(cfg, "Poloniex", poloniexEngine)
-	liqui := LoadExchange(cfg, "Liqui", liquiEngine)
-	exchanges := []core.Exchange{poloniex, liqui, kraken}
+	// poloniex := LoadExchange(cfg, "Poloniex", poloniexEngine)
+	// liqui := LoadExchange(cfg, "Liqui", liquiEngine)
+	// exchanges := []core.Exchange{poloniex, liqui, kraken}
+	exchanges := []core.Exchange{kraken}
 
 	mashup := core.ExchangeMashup{}
 	mashup.Init(exchanges)
 
-	from := core.Currency("BTC")
-	to := core.Currency("BTC")
+	from := core.Currency("ETH")
+	to := core.Currency("ETH")
 	depth := 3
 	paths := graph.PathFinder(mashup, from, to, depth)
 
-	nodes := make([]graph.Node, 0)
+	nodes := make([]*graph.Node, 0)
 	pathsLookup := make(map[string][]graph.Path)
 	for _, path := range paths {
-		for _, node := range path.Nodes {
-			paths, ok := pathsLookup[node.ID()]
+		for _, cn := range path.ContextualNodes {
+			paths, ok := pathsLookup[cn.Node.ID()]
 			if !ok {
-				nodes = append(nodes, node)
+				nodes = append(nodes, cn.Node)
 				paths = make([]graph.Path, 0)
 			}
-			pathsLookup[node.ID()] = append(paths, path)
+			pathsLookup[cn.Node.ID()] = append(paths, path)
 			// fmt.Println(path.Description())
 		}
 	}
@@ -92,31 +91,48 @@ func main() {
 		pairsLookup[exch.Name] = graph.MergeSort(pairsLookup[exch.Name])
 	}
 
-	for _, exch := range exchanges {
-		sortedNodes := pairsLookup[exch.Name]
-		for i, n := range sortedNodes {
-			if i > 5 {
-				break
+	arbitrage := strategies.Arbitrage{}
+
+	for i := 0; i < 10; i++ {
+		for _, exch := range exchanges {
+			sortedNodes := pairsLookup[exch.Name]
+			if i >= len(sortedNodes)-1 {
+				continue
 			}
+			n := sortedNodes[i]
 			cp := pair.NewCurrencyPair(string(n.Node.From), string(n.Node.To))
+			fmt.Println("===================")
+			fmt.Println(n.Node.From, n.Node.To, exch.Name)
+			fmt.Println("===================")
+			src, err := exch.Engine.UpdateOrderbook(cp, "SPOT")
+			if err == nil {
+				dst := n.Node.Orderbook
+				if dst == nil {
+					dst = &core.Orderbook{}
+					dst.CurrencyPair = core.CurrencyPair{n.Node.From, n.Node.To}
+					dst.Bids = make([]core.Order, 0)
+					dst.Asks = make([]core.Order, 0)
+					n.Node.Orderbook = dst
+				}
+				// fmt.Println("1 ------------------")
+				// fmt.Println(src.Asks)
+				for _, ask := range src.Asks {
+					dst.Asks = append(dst.Asks, core.Order{ask.Price, ask.Amount, core.Sell})
+				}
+				// fmt.Println("2 ------------------")
+				// fmt.Println(src.Bids)
+				for _, bid := range src.Bids {
+					dst.Bids = append(dst.Bids, core.Order{bid.Price, bid.Amount, core.Buy})
+				}
+				// fmt.Println("~~~~~~~~~~~~~~~~~~")
 
-			base := orderbook.Base{
-				Pair:         cp,
-				CurrencyPair: cp.Pair().String(),
-				Asks:         []orderbook.Item{orderbook.Item{Price: 0, Amount: 0}},
-				Bids:         []orderbook.Item{orderbook.Item{Price: 0, Amount: 0}},
+				arbitrage.Run(pathsLookup[n.Node.ID()])
+			} else {
+				fmt.Println("Error", err)
 			}
-
-			o1 := orderbook.CreateNewOrderbook(exch.Name, cp, base, orderbook.Spot)
-			fmt.Println(o1.Orderbook)
-			o, err := exch.Engine.UpdateOrderbook(cp, "SPOT")
-			if err != nil {
-				fmt.Println(o)
-			}
-			time.Sleep(10000 * time.Millisecond)
 		}
+		time.Sleep(5000 * time.Millisecond)
 	}
-
 	<-interrupt
 }
 

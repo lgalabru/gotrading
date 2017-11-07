@@ -3,25 +3,31 @@ package graph
 import (
 	"fmt"
 	"gotrading/core"
-	"strconv"
 	"strings"
 )
 
 type Node struct {
-	From     core.Currency
-	To       core.Currency
-	Exchange core.Exchange
-	Inverted bool
+	From      core.Currency
+	To        core.Currency
+	Exchange  core.Exchange
+	Orderbook *core.Orderbook
+}
+
+type ContextualNode struct {
+	Node           *Node
+	Inverted       bool
+	SoldCurrency   *core.Currency
+	BoughtCurrency *core.Currency
 }
 
 type NodeLookup struct {
-	Node       Node
+	Node       *Node
 	PathsCount int
 }
 
-func (n NodeLookup) String() string {
-	return n.Node.Description() + " " + strconv.Itoa(n.PathsCount)
-}
+// func (n NodeLookup) String() string {
+// 	return n.Node.Description() + " " + strconv.Itoa(n.PathsCount)
+// }
 
 func (n Node) display() {
 	fmt.Println(n.Description())
@@ -36,16 +42,40 @@ func (n Node) isEqual(m Node) bool {
 	return f && t && e || fi && ti && e
 }
 
-func (n Node) Description() string {
+func (n ContextualNode) isEqual(m ContextualNode) bool {
+	return n.Node.isEqual(*m.Node)
+}
+
+func (n ContextualNode) Description() string {
 	var str string
 	if n.Inverted {
-		str = string(n.From) + " <- " + string(n.To) + " (" + n.Exchange.Name + ")"
+		// str = "Use " + string(n.Node.From) + " to buy " + string(n.Node.To) + " on " + n.Node.Exchange.Name + "."
+		str = string(n.Node.From) + "+, " + string(n.Node.To) + "- " + n.Node.Exchange.Name + "."
 	} else {
-		str = string(n.From) + " -> " + string(n.To) + " (" + n.Exchange.Name + ")"
+		str = string(n.Node.From) + "-, " + string(n.Node.To) + "+ " + n.Node.Exchange.Name + "."
+		// str = "Sell " + string(n.Node.From) + " for " + string(n.Node.To) + " on " + n.Node.Exchange.Name + "."
 	}
 	return str
 }
 
+func (n Node) Description() string {
+	var str string
+	str = string(n.From) + " / " + string(n.To) + " (" + n.Exchange.Name + ")"
+	return str
+}
+
 func (n Node) ID() string {
-	return string(n.From) + "-" + string(n.To) + "@" + n.Exchange.Name
+	var str string
+	str = string(n.From) + "+" + string(n.To) + "@" + n.Exchange.Name
+	return str
+}
+
+func (n ContextualNode) ID() string {
+	var str string
+	if n.Inverted {
+		str = string(n.Node.To) + "-" + string(n.Node.From) + "@" + n.Node.Exchange.Name
+	} else {
+		str = string(n.Node.From) + "-" + string(n.Node.To) + "@" + n.Node.Exchange.Name
+	}
+	return str
 }

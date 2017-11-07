@@ -258,7 +258,7 @@
   {
    "Name": "Kraken",
    "Enabled": true,
-   "Verbose": true,
+   "Verbose": false,
    "Websocket": false,
    "RESTPollingDelay": 10,
    "AuthenticatedAPISupport": false,
