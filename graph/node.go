@@ -50,10 +50,10 @@ func (n ContextualNode) Description() string {
 	var str string
 	if n.Inverted {
 		// str = "Use " + string(n.Node.From) + " to buy " + string(n.Node.To) + " on " + n.Node.Exchange.Name + "."
-		str = string(n.Node.From) + "+, " + string(n.Node.To) + "- " + n.Node.Exchange.Name + "."
+		str = "[" + string(n.Node.From) + "+/-" + string(n.Node.To) + "]@" + n.Node.Exchange.Name
 	} else {
-		str = string(n.Node.From) + "-, " + string(n.Node.To) + "+ " + n.Node.Exchange.Name + "."
 		// str = "Sell " + string(n.Node.From) + " for " + string(n.Node.To) + " on " + n.Node.Exchange.Name + "."
+		str = "[" + string(n.Node.From) + "-/+" + string(n.Node.To) + "]@" + n.Node.Exchange.Name
 	}
 	return str
 }

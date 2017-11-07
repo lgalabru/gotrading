@@ -8,11 +8,12 @@ import (
 
 	"gotrading/core"
 	"gotrading/graph"
+	"gotrading/services"
 	"gotrading/strategies"
 
 	"github.com/thrasher-/gocryptotrader/config"
-	"github.com/thrasher-/gocryptotrader/currency/pair"
 	"github.com/thrasher-/gocryptotrader/exchanges/kraken"
+	"github.com/thrasher-/gocryptotrader/exchanges/liqui"
 )
 
 func main() {
@@ -45,13 +46,13 @@ func main() {
 	// portfolio.DisplayBalances()
 	krakenEngine := new(kraken.Kraken)
 	// poloniexEngine := new(poloniex.Poloniex)
-	// liquiEngine := new(liqui.Liqui)
+	liquiEngine := new(liqui.Liqui)
 
-	kraken := LoadExchange(cfg, "Kraken", krakenEngine)
-	// poloniex := LoadExchange(cfg, "Poloniex", poloniexEngine)
-	// liqui := LoadExchange(cfg, "Liqui", liquiEngine)
-	// exchanges := []core.Exchange{poloniex, liqui, kraken}
-	exchanges := []core.Exchange{kraken}
+	kraken := services.LoadExchange(cfg, "Kraken", krakenEngine)
+	// poloniex := services.LoadExchange(cfg, "Poloniex", poloniexEngine)
+	liqui := services.LoadExchange(cfg, "Liqui", liquiEngine)
+	exchanges := []core.Exchange{liqui, kraken}
+	// exchanges := []core.Exchange{kraken}
 
 	mashup := core.ExchangeMashup{}
 	mashup.Init(exchanges)
@@ -71,7 +72,6 @@ func main() {
 				paths = make([]graph.Path, 0)
 			}
 			pathsLookup[cn.Node.ID()] = append(paths, path)
-			// fmt.Println(path.Description())
 		}
 	}
 	fmt.Println("Observing", len(paths), "combinations, distributed over", len(nodes), "pairs.")
@@ -92,60 +92,16 @@ func main() {
 	}
 
 	arbitrage := strategies.Arbitrage{}
+	delayBetweenReqs := make(map[string]time.Duration, len(exchanges))
+	delayBetweenReqs["Kraken"] = time.Duration(100)
+	delayBetweenReqs["Liqui"] = time.Duration(500)
 
-	for i := 0; i < 10; i++ {
-		for _, exch := range exchanges {
-			sortedNodes := pairsLookup[exch.Name]
-			if i >= len(sortedNodes)-1 {
-				continue
-			}
-			n := sortedNodes[i]
-			cp := pair.NewCurrencyPair(string(n.Node.From), string(n.Node.To))
-			fmt.Println("===================")
-			fmt.Println(n.Node.From, n.Node.To, exch.Name)
-			fmt.Println("===================")
-			src, err := exch.Engine.UpdateOrderbook(cp, "SPOT")
-			if err == nil {
-				dst := n.Node.Orderbook
-				if dst == nil {
-					dst = &core.Orderbook{}
-					dst.CurrencyPair = core.CurrencyPair{n.Node.From, n.Node.To}
-					dst.Bids = make([]core.Order, 0)
-					dst.Asks = make([]core.Order, 0)
-					n.Node.Orderbook = dst
-				}
-				// fmt.Println("1 ------------------")
-				// fmt.Println(src.Asks)
-				for _, ask := range src.Asks {
-					dst.Asks = append(dst.Asks, core.Order{ask.Price, ask.Amount, core.Sell})
-				}
-				// fmt.Println("2 ------------------")
-				// fmt.Println(src.Bids)
-				for _, bid := range src.Bids {
-					dst.Bids = append(dst.Bids, core.Order{bid.Price, bid.Amount, core.Buy})
-				}
-				// fmt.Println("~~~~~~~~~~~~~~~~~~")
-
-				arbitrage.Run(pathsLookup[n.Node.ID()])
-			} else {
-				fmt.Println("Error", err)
-			}
-		}
-		time.Sleep(5000 * time.Millisecond)
+	for _, exch := range exchanges {
+		nodes := pairsLookup[exch.Name]
+		go services.StartPollingOrderbooks(exch, nodes, delayBetweenReqs[exch.Name], func(n graph.Node) {
+			arbitrage.Run(pathsLookup[n.ID()])
+		})
 	}
+
 	<-interrupt
-}
-
-func LoadExchange(cfg *config.Config, name string, exch core.ExchangeInterface) core.Exchange {
-	config, _ := cfg.GetExchangeConfig(name)
-	exch.SetDefaults()
-	exch.Setup(config)
-	var rawPairs = exch.GetAvailableCurrencies()
-	pairs := make([]core.CurrencyPair, len(rawPairs))
-	for i, c := range rawPairs {
-		pairs[i] = core.CurrencyPair{
-			core.Currency(c.GetFirstCurrency()),
-			core.Currency(c.GetSecondCurrency())}
-	}
-	return core.Exchange{name, pairs, exch}
 }

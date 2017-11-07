@@ -17,7 +17,7 @@ func (p Path) contains(n ContextualNode) bool {
 func (p Path) Description() string {
 	str := ""
 	for _, n := range p.ContextualNodes {
-		str += n.Description() + " "
+		str += n.Description() + " -> "
 	}
 	return str
 }
