@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"strings"
 
+	"gotrading/core"
 	"gotrading/graph"
 )
 
@@ -12,33 +13,51 @@ type Arbitrage struct {
 	Solutions []Solution
 }
 
-func (arbitrage *Arbitrage) Run(paths []graph.Path) {
+type ArbitrageChain struct {
+	Path            graph.Path
+	OrdersToFulfill []core.Order
+	Performance     float64
+}
 
-	// Pour chaque noeud, on regarde les bids / asks du orderbook
+func (arbitrage *Arbitrage) Run(paths []graph.Path) []ArbitrageChain {
+
+	chains := make([]ArbitrageChain, len(paths))
+
 	for _, p := range paths {
 		factors := make([]string, 0)
 		performance := float64(1)
-		for _, n := range p.ContextualNodes {
+		chain := ArbitrageChain{}
+		chain.OrdersToFulfill = make([]core.Order, len(p.ContextualNodes))
+		for i, n := range p.ContextualNodes {
 			var factor = float64(0)
+			order := core.Order{0, 0, 0}
 			if n.Node.Orderbook != nil {
 				if n.Inverted {
 					// We want to sell, so we match the Bid.
 					if len(n.Node.Orderbook.Bids) > 0 {
-						factor = 1 / n.Node.Orderbook.Bids[0].Price
+						order = n.Node.Orderbook.Bids[0]
+						factor = 1 / order.Price
 					}
 				} else {
 					// We want to buy, so we match the Ask.
 					if len(n.Node.Orderbook.Asks) > 0 {
-						factor = n.Node.Orderbook.Asks[0].Price
+						order = n.Node.Orderbook.Asks[0]
+						factor = order.Price
 					}
 				}
 			}
+			chain.OrdersToFulfill[i] = order
 			factors = append(factors, strconv.FormatFloat(factor, 'f', 6, 64))
 			performance = performance * factor
 			// fmt.Println(n.Description(), strconv.FormatFloat(factor, 'f', 6, 64))
 		}
+		chain.Path = p
+		chain.Performance = performance
+		chains = append(chains, chain)
 		if performance > 0 {
 			fmt.Println(p.Description(), performance, "//", strings.Join(factors, ", "))
 		}
 	}
+
+	return chains
 }

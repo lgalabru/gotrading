@@ -1,11 +1,12 @@
 package graph
 
 import (
+	"fmt"
 	"gotrading/core"
 )
 
-func PathFinder(mashup core.ExchangeMashup, from core.Currency, to core.Currency, depth int) []Path {
-	var paths []Path
+func PathFinder(mashup core.ExchangeMashup, from core.Currency, to core.Currency, depth int) ([]*Node, map[string][]Path) {
+	var rawPaths []Path
 	lookup := make(map[string]*Node)
 	cLookup := make(map[string]*ContextualNode)
 
@@ -16,12 +17,27 @@ func PathFinder(mashup core.ExchangeMashup, from core.Currency, to core.Currency
 				if n != nil {
 					n.SoldCurrency = &from
 					n.BoughtCurrency = &to
-					paths = append(findPaths(mashup, depth, Path{[]*ContextualNode{n}}, lookup, cLookup), paths...)
+					rawPaths = append(findPaths(mashup, depth, Path{[]*ContextualNode{n}}, lookup, cLookup), rawPaths...)
 				}
 			}
 		}
 	}
-	return paths
+
+	nodes := make([]*Node, 0)
+	paths := make(map[string][]Path)
+	for _, path := range rawPaths {
+		for _, cn := range path.ContextualNodes {
+			p, ok := paths[cn.Node.ID()]
+			if !ok {
+				nodes = append(nodes, cn.Node)
+				p = make([]Path, 0)
+			}
+			paths[cn.Node.ID()] = append(p, path)
+		}
+	}
+	fmt.Println("Observing", len(rawPaths), "combinations, distributed over", len(nodes), "pairs.")
+
+	return nodes, paths
 }
 
 func findPaths(m core.ExchangeMashup, depth int, p Path, lookup map[string]*Node, cLookup map[string]*ContextualNode) []Path {

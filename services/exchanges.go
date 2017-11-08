@@ -33,8 +33,6 @@ func StartPollingOrderbooks(exch core.Exchange, nodes []graph.NodeLookup, delayB
 		time.Sleep(delayBetweenReqs * time.Millisecond)
 
 		cp := pair.NewCurrencyPair(string(n.Node.From), string(n.Node.To))
-		fmt.Println("Refreshing", n.Node.From, n.Node.To, exch.Name)
-		fmt.Println("===================")
 		src, err := exch.Engine.UpdateOrderbook(cp, "SPOT")
 		if err == nil {
 			dst := n.Node.Orderbook
