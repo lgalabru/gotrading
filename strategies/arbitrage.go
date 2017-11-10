@@ -2,6 +2,7 @@ package strategies
 
 import (
 	"fmt"
+	"math"
 	"strconv"
 	"strings"
 
@@ -17,6 +18,7 @@ type ArbitrageChain struct {
 	Path            graph.Path
 	OrdersToFulfill []core.Order
 	Performance     float64
+	Volume          float64
 }
 
 func (arbitrage *Arbitrage) Run(paths []graph.Path) []ArbitrageChain {
@@ -31,6 +33,7 @@ func (arbitrage *Arbitrage) Run(paths []graph.Path) []ArbitrageChain {
 		for i, n := range p.ContextualNodes {
 			var factor = float64(0)
 			order := core.Order{0, 0, 0}
+
 			if n.Node.Orderbook != nil {
 				if n.Inverted {
 					// We want to sell, so we match the Bid.
@@ -46,10 +49,15 @@ func (arbitrage *Arbitrage) Run(paths []graph.Path) []ArbitrageChain {
 					}
 				}
 			}
+			performance = performance * factor
+
+			if i == 0 {
+				chain.Volume = order.Volume
+			} else {
+				chain.Volume = math.Min(chain.Volume, (1/performance)*order.Volume)
+			}
 			chain.OrdersToFulfill[i] = order
 			factors = append(factors, strconv.FormatFloat(factor, 'f', 6, 64))
-			performance = performance * factor
-			// fmt.Println(n.Description(), strconv.FormatFloat(factor, 'f', 6, 64))
 		}
 		chain.Path = p
 		chain.Performance = performance

@@ -46,7 +46,7 @@ func main() {
 	nodes, paths := graph.PathFinder(mashup, from, to, depth)
 
 	table := tablewriter.NewWriter(os.Stdout)
-	table.SetHeader([]string{"Link 1", "Link 2", "Link 3", "Values", "Performance", "Trigger"})
+	table.SetHeader([]string{"Link 1", "Link 2", "Link 3", "Performance", "Input", "Output", "Result"})
 	table.Render()
 
 	// Create a map
@@ -83,13 +83,14 @@ func main() {
 					continue
 				}
 				ordersCount := len(chain.Path.ContextualNodes)
-				row := make([]string, ordersCount+3)
+				row := make([]string, ordersCount+4)
 				for j, node := range chain.Path.ContextualNodes {
 					row[j] = node.Description()
 				}
-				row[ordersCount] = "-"
-				row[ordersCount+1] = strconv.FormatFloat(chain.Performance, 'f', 6, 64)
-				row[ordersCount+2] = "Refresh"
+				row[ordersCount] = strconv.FormatFloat(chain.Performance, 'f', 6, 64)
+				row[ordersCount+1] = strconv.FormatFloat(chain.Volume, 'f', 6, 64)
+				row[ordersCount+2] = strconv.FormatFloat(chain.Volume*chain.Performance, 'f', 6, 64)
+				row[ordersCount+3] = strconv.FormatFloat(chain.Volume*chain.Performance-chain.Volume, 'f', 6, 64)
 				rows = append(rows, row)
 			}
 			if len(rows) > 0 {
