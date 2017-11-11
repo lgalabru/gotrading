@@ -10,7 +10,7 @@ import (
 type Exchange struct {
 	Name           string
 	AvailablePairs []CurrencyPair
-	Engine         ExchangeInterface
+	Engine         *ExchangeInterface
 }
 
 type ExchangeInterface interface {

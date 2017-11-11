@@ -1,4 +1,4 @@
-package core
+package strategies_test
 
 import (
 	. "github.com/onsi/ginkgo"
@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-func TestCore(t *testing.T) {
+func TestStrategies(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Core Suite")
+	RunSpecs(t, "Strategies Suite")
 }

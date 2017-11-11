@@ -1,10 +1,8 @@
 package strategies
 
 import (
-	"fmt"
 	"math"
 	"strconv"
-	"strings"
 
 	"gotrading/core"
 	"gotrading/graph"
@@ -25,7 +23,7 @@ func (arbitrage *Arbitrage) Run(paths []graph.Path) []ArbitrageChain {
 
 	chains := make([]ArbitrageChain, len(paths))
 
-	for _, p := range paths {
+	for j, p := range paths {
 		factors := make([]string, 0)
 		performance := float64(1)
 		chain := ArbitrageChain{}
@@ -33,38 +31,37 @@ func (arbitrage *Arbitrage) Run(paths []graph.Path) []ArbitrageChain {
 		for i, n := range p.ContextualNodes {
 			var factor = float64(0)
 			order := core.Order{0, 0, 0}
-
+			volume := float64(0)
 			if n.Node.Orderbook != nil {
 				if n.Inverted {
 					// We want to sell, so we match the Bid.
 					if len(n.Node.Orderbook.Bids) > 0 {
 						order = n.Node.Orderbook.Bids[0]
 						factor = 1 / order.Price
+						volume = order.Volume
 					}
 				} else {
 					// We want to buy, so we match the Ask.
 					if len(n.Node.Orderbook.Asks) > 0 {
 						order = n.Node.Orderbook.Asks[0]
 						factor = order.Price
+						volume = order.Volume
 					}
 				}
 			}
 			performance = performance * factor
-
 			if i == 0 {
-				chain.Volume = order.Volume
+				chain.Volume = volume
 			} else {
-				chain.Volume = math.Min(chain.Volume, (1/performance)*order.Volume)
+				result := math.Min(chain.Volume*performance, volume*order.Price)
+				chain.Volume = result / performance
 			}
 			chain.OrdersToFulfill[i] = order
 			factors = append(factors, strconv.FormatFloat(factor, 'f', 6, 64))
 		}
 		chain.Path = p
 		chain.Performance = performance
-		chains = append(chains, chain)
-		if performance > 0 {
-			fmt.Println(p.Description(), performance, "//", strings.Join(factors, ", "))
-		}
+		chains[j] = chain
 	}
 
 	return chains

@@ -17,7 +17,7 @@ var _ = Describe("ExchangeMashup", func() {
 
 	Describe("Getting started with ginko", func() {
 		Context("With 101 test", func() {
-      It("should work", func() {
+			It("should work", func() {
 				Expect(1).To(Equal(1))
 			})
 		})
