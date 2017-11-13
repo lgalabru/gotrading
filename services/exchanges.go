@@ -24,16 +24,18 @@ func LoadExchange(cfg *config.Config, name string, exch core.ExchangeInterface) 
 			core.Currency(c.GetFirstCurrency()),
 			core.Currency(c.GetSecondCurrency())}
 	}
-	return core.Exchange{name, pairs, exch}
+	return core.Exchange{name, pairs, &exch}
 }
 
 func StartPollingOrderbooks(exch core.Exchange, nodes []graph.NodeLookup, delayBetweenReqs time.Duration, fn orderbookReceived) {
-
-	for _, n := range nodes {
+	var i = int(0)
+	for {
+		n := nodes[i%len(nodes)]
+		i += 1
 		time.Sleep(delayBetweenReqs * time.Millisecond)
 
 		cp := pair.NewCurrencyPair(string(n.Node.From), string(n.Node.To))
-		src, err := exch.Engine.UpdateOrderbook(cp, "SPOT")
+		src, err := (*exch.Engine).UpdateOrderbook(cp, "SPOT")
 		if err == nil {
 			dst := n.Node.Orderbook
 			if dst == nil {

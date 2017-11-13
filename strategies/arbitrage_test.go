@@ -100,7 +100,6 @@ When I fulfill all the orders, running the arbitrage`, func() {
 				c := chains[0]
 				Expect(c.Volume).To(Equal(0.1))
 			})
-			//
 		})
 	})
 })

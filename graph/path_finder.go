@@ -5,7 +5,7 @@ import (
 	"gotrading/core"
 )
 
-func PathFinder(mashup core.ExchangeMashup, from core.Currency, to core.Currency, depth int) ([]*Node, map[string][]Path) {
+func PathFinder(mashup core.ExchangeMashup, from core.Currency, to core.Currency, depth int) ([]*Node, map[string][]Path, []Path) {
 	var rawPaths []Path
 	lookup := make(map[string]*Node)
 	cLookup := make(map[string]*ContextualNode)
@@ -35,13 +35,15 @@ func PathFinder(mashup core.ExchangeMashup, from core.Currency, to core.Currency
 			paths[cn.Node.ID()] = append(p, path)
 		}
 	}
-	fmt.Println("Observing", len(rawPaths), "combinations, distributed over", len(nodes), "pairs.")
 
-	return nodes, paths
+	fmt.Println("Observing", len(rawPaths), "paths")
+
+	return nodes, paths, rawPaths
 }
 
 func findPaths(m core.ExchangeMashup, depth int, p Path, lookup map[string]*Node, cLookup map[string]*ContextualNode) []Path {
 	var paths []Path
+	// fmt.Println(p.Description())
 	lastNode := p.ContextualNodes[len(p.ContextualNodes)-1]
 	if len(p.ContextualNodes) == depth {
 		from := p.ContextualNodes[0].SoldCurrency

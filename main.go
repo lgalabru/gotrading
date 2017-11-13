@@ -27,23 +27,28 @@ func main() {
 
 	interrupt := make(chan os.Signal, 1)
 
-	krakenEngine := new(kraken.Kraken)
-	// poloniexEngine := new(poloniex.Poloniex)
 	liquiEngine := new(liqui.Liqui)
+	krakenEngine := new(kraken.Kraken)
+	// bittrexEngine := new(bittrex.Bittrex)
+	// gdaxEngine := new(gdax.GDAX)
+	// poloniexEngine := new(poloniex.Poloniex)
 
-	kraken := services.LoadExchange(cfg, "Kraken", krakenEngine)
-	// poloniex := services.LoadExchange(cfg, "Poloniex", poloniexEngine)
 	liqui := services.LoadExchange(cfg, "Liqui", liquiEngine)
-	exchanges := []core.Exchange{liqui, kraken}
-	// exchanges := []core.Exchange{kraken}
+	kraken := services.LoadExchange(cfg, "Kraken", krakenEngine)
+	// bittrex := services.LoadExchange(cfg, "Bittrex", bittrexEngine)
+	// poloniex := services.LoadExchange(cfg, "Poloniex", poloniexEngine)
+	// gdax := services.LoadExchange(cfg, "GDAX", gdaxEngine)
+
+	// exchanges := []core.Exchange{kraken, liqui, gdax, bittrex}
+	exchanges := []core.Exchange{kraken, liqui}
 
 	mashup := core.ExchangeMashup{}
 	mashup.Init(exchanges)
 
-	from := core.Currency("BTC")
+	from := core.Currency("ETH")
 	to := from
 	depth := 3
-	nodes, paths := graph.PathFinder(mashup, from, to, depth)
+	nodes, paths, _ := graph.PathFinder(mashup, from, to, depth)
 
 	table := tablewriter.NewWriter(os.Stdout)
 	table.SetHeader([]string{"Link 1", "Link 2", "Link 3", "Performance", "Input", "Output", "Result"})
@@ -67,7 +72,7 @@ func main() {
 	arbitrage := strategies.Arbitrage{}
 
 	delayBetweenReqs := make(map[string]time.Duration, len(exchanges))
-	delayBetweenReqs["Kraken"] = time.Duration(100)
+	delayBetweenReqs["Kraken"] = time.Duration(500)
 	delayBetweenReqs["Liqui"] = time.Duration(500)
 
 	// conn, err := amqp.Dial("amqp://developer:xLae4pzT@gotrading-rabbitmq.dev:5672/gotrading")
