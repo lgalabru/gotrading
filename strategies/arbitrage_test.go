@@ -19,7 +19,7 @@ var _ = Describe("Arbitrage in 3 steps, starting and finishing with ABC", func()
 	})
 
 	Describe(`
-Considering the combinaison: [ABC/DEF]@Exhange1 -> [DEF/XYZ]@Exhange1 -> [XYZ/ABC]@Exhange1, and the orderbooks:
+Considering the combination: [ABC/DEF]@Exhange1 -> [DEF/XYZ]@Exhange1 -> [XYZ/ABC]@Exhange1, and the orderbooks:
 [ABC/DEF]@Exhange1 -> Best Bid: 1ABC = 10DEF, Best Ask: 1ABC = 10DEF #ABC=0, DEF=10, XYZ=0
 [DEF/XYZ]@Exhange1 -> Best Bid: 1DEF = 10XYZ, Best Ask: 1DEF = 10XYZ #ABC=0, DEF=0, XYZ=100
 [XYZ/ABC]@Exhange1 -> Best Bid: 1XYZ = 0.01ABC, Best Ask: 1XYZ = 0.01ABC`, func() {
@@ -42,10 +42,10 @@ When I fulfill all the orders, running the arbitrage`, func() {
 
 				bids1 := append([]core.Order{}, core.Order{10, 1, core.Buy})
 				asks1 := append([]core.Order{}, core.Order{10, 1, core.Sell})
-				bids2 := append([]core.Order{}, core.Order{10, 1, core.Buy})
-				asks2 := append([]core.Order{}, core.Order{10, 10, core.Sell})
-				bids3 := append([]core.Order{}, core.Order{0.01, 1, core.Buy})
-				asks3 := append([]core.Order{}, core.Order{0.01, 100, core.Sell})
+				bids2 := append([]core.Order{}, core.Order{10, 10, core.Buy})
+				asks2 := append([]core.Order{}, core.Order{10, 1, core.Sell})
+				bids3 := append([]core.Order{}, core.Order{0.01, 100, core.Buy})
+				asks3 := append([]core.Order{}, core.Order{0.01, 1, core.Sell})
 
 				ob1 = core.Orderbook{core.CurrencyPair{abc, def}, bids1, asks1}
 				ob2 = core.Orderbook{core.CurrencyPair{def, xyz}, bids2, asks2}
@@ -61,7 +61,7 @@ When I fulfill all the orders, running the arbitrage`, func() {
 				cnodes[2] = &(graph.ContextualNode{&node3, false, &xyz, &abc})
 
 				paths = make([]graph.Path, 1)
-				paths[0] = graph.Path{cnodes}
+				paths[0] = graph.Path{cnodes, nil, nil}
 
 				chains = arbitrage.Run(paths)
 			})
@@ -81,21 +81,21 @@ When I fulfill all the orders, running the arbitrage`, func() {
 			})
 
 			It("should return one chain announcing a performance equal to 10x if 1XYZ = 0.10ABC instead of 1XYZ = 0.01ABC", func() {
-				ob3.Asks[0].Price = 0.10
+				ob3.Bids[0].Price = 0.10
 				chains = arbitrage.Run(paths)
 				c := chains[0]
 				Expect(c.Performance).To(Equal(10.0))
 			})
 
 			It("should return one chain announcing a performance equal to 10x if 1XYZ = 0.10ABC instead of 1XYZ = 0.01ABC", func() {
-				ob3.Asks[0].Price = 0.10
+				ob3.Bids[0].Price = 0.10
 				chains = arbitrage.Run(paths)
 				c := chains[0]
 				Expect(c.Performance).To(Equal(10.0))
 			})
 
 			It("should return one chain enforcing the initial volume to 0.1 if only 10 XYZ are available", func() {
-				ob3.Asks[0].Volume = 10
+				ob3.Bids[0].Volume = 10
 				chains = arbitrage.Run(paths)
 				c := chains[0]
 				Expect(c.Volume).To(Equal(0.1))
@@ -105,7 +105,7 @@ When I fulfill all the orders, running the arbitrage`, func() {
 })
 
 // Describe(`
-// Considering the combinaison: [BTC/USD]@Exhange1 -> [ETH/USD]@Exhange1 -> [ETH/BTC]@Exhange1`, func() {
+// Considering the combination: [BTC/USD]@Exhange1 -> [ETH/USD]@Exhange1 -> [ETH/BTC]@Exhange1`, func() {
 // 		Context(`
 // [BTC/USD]@Exhange1 -> Best Bid: 1BTC = 5,999USD / Best Ask: 1BTC = 6,000USD
 // [ETH/USD]@Exhange1 -> Best Bid: 1ETH = 299USD / Best Ask: 1ETH = 300USD

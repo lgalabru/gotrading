@@ -34,16 +34,16 @@ func (arbitrage *Arbitrage) Run(paths []graph.Path) []ArbitrageChain {
 			volume := float64(0)
 			if n.Node.Orderbook != nil {
 				if n.Inverted {
-					// We want to sell, so we match the Bid.
-					if len(n.Node.Orderbook.Bids) > 0 {
-						order = n.Node.Orderbook.Bids[0]
+					// We want to sell the quote, so we match the Ask.
+					if len(n.Node.Orderbook.Asks) > 0 {
+						order = n.Node.Orderbook.Asks[0]
 						factor = 1 / order.Price
 						volume = order.Volume
 					}
 				} else {
-					// We want to buy, so we match the Ask.
-					if len(n.Node.Orderbook.Asks) > 0 {
-						order = n.Node.Orderbook.Asks[0]
+					// We want to buy the quote, so we match the Bid.
+					if len(n.Node.Orderbook.Bids) > 0 {
+						order = n.Node.Orderbook.Bids[0]
 						factor = order.Price
 						volume = order.Volume
 					}
@@ -53,6 +53,7 @@ func (arbitrage *Arbitrage) Run(paths []graph.Path) []ArbitrageChain {
 			if i == 0 {
 				chain.Volume = volume
 			} else {
+				//
 				result := math.Min(chain.Volume*performance, volume*order.Price)
 				chain.Volume = result / performance
 			}
