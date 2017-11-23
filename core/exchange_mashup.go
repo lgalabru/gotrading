@@ -1,5 +1,6 @@
 package core
 
+// ExchangeMashup allowing to identify available bridges between currencies accross exchanges
 type ExchangeMashup struct {
 	Currencies       []Currency
 	Exchanges        []Exchange
@@ -8,6 +9,7 @@ type ExchangeMashup struct {
 	Links            [][][]bool
 }
 
+// Init initializes a mashup
 func (m *ExchangeMashup) Init(exchanges []Exchange) {
 	m.CurrenciesLookup = make(map[Currency]int)
 	m.Currencies = make([]Currency, 0)
@@ -17,15 +19,15 @@ func (m *ExchangeMashup) Init(exchanges []Exchange) {
 	for i, exch := range exchanges {
 		for _, pair := range exch.AvailablePairs {
 
-			_, ok := m.CurrenciesLookup[pair.From]
+			_, ok := m.CurrenciesLookup[pair.Base]
 			if !ok {
-				m.Currencies = append(m.Currencies, pair.From)
-				m.CurrenciesLookup[pair.From] = len(m.Currencies) - 1
+				m.Currencies = append(m.Currencies, pair.Base)
+				m.CurrenciesLookup[pair.Base] = len(m.Currencies) - 1
 			}
-			_, ok = m.CurrenciesLookup[pair.To]
+			_, ok = m.CurrenciesLookup[pair.Quote]
 			if !ok {
-				m.Currencies = append(m.Currencies, pair.To)
-				m.CurrenciesLookup[pair.To] = len(m.Currencies) - 1
+				m.Currencies = append(m.Currencies, pair.Quote)
+				m.CurrenciesLookup[pair.Quote] = len(m.Currencies) - 1
 
 			}
 		}
@@ -33,11 +35,11 @@ func (m *ExchangeMashup) Init(exchanges []Exchange) {
 	}
 
 	m.Links = make([][][]bool, len(m.Currencies))
-	for i, _ := range m.Currencies {
+	for i := range m.Currencies {
 		m.Links[i] = make([][]bool, len(m.Currencies))
-		for j, _ := range m.Currencies {
+		for j := range m.Currencies {
 			m.Links[i][j] = make([]bool, len(exchanges))
-			for z, _ := range exchanges {
+			for z := range exchanges {
 				m.Links[i][j][z] = false
 			}
 		}
@@ -45,12 +47,13 @@ func (m *ExchangeMashup) Init(exchanges []Exchange) {
 
 	for _, exch := range exchanges {
 		for _, pair := range exch.AvailablePairs {
-			m.Links[m.CurrenciesLookup[pair.From]][m.CurrenciesLookup[pair.To]][m.ExchangesLookup[exch.Name]] = true
+			m.Links[m.CurrenciesLookup[pair.Base]][m.CurrenciesLookup[pair.Quote]][m.ExchangesLookup[exch.Name]] = true
 		}
 	}
 }
 
-func (m *ExchangeMashup) LinkExist(from Currency, to Currency, exch Exchange) bool {
-	ok := m.Links[m.CurrenciesLookup[from]][m.CurrenciesLookup[to]][m.ExchangesLookup[exch.Name]]
+// LinkExist returns true if a currency pair exists for a given exchange
+func (m *ExchangeMashup) LinkExist(base Currency, quote Currency, exch Exchange) bool {
+	ok := m.Links[m.CurrenciesLookup[base]][m.CurrenciesLookup[quote]][m.ExchangesLookup[exch.Name]]
 	return ok
 }

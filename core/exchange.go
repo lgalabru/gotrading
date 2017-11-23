@@ -7,12 +7,14 @@ import (
 	"github.com/thrasher-/gocryptotrader/exchanges/ticker"
 )
 
+// Exchange represents an exchange and list the available pairs.
 type Exchange struct {
 	Name           string             `json:"name"`
 	AvailablePairs []CurrencyPair     `json:"-"`
 	Engine         *ExchangeInterface `json:"-"`
 }
 
+// ExchangeInterface is an abstraction for using the engines from gocryptotrader.
 type ExchangeInterface interface {
 	Setup(exch config.ExchangeConfig)
 	Start()

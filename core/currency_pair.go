@@ -1,6 +1,7 @@
 package core
 
+// CurrencyPair represents a pair of currencies.
 type CurrencyPair struct {
-	From Currency `json:"from"`
-	To   Currency `json:"to"`
+	Base  Currency `json:"base"`
+	Quote Currency `json:"quote"`
 }
