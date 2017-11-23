@@ -1,9 +1,12 @@
 package main
 
 import (
+	"encoding/json"
+	"fmt"
 	"log"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"gotrading/core"
@@ -11,11 +14,26 @@ import (
 	"gotrading/services"
 	"gotrading/strategies"
 
-	"github.com/olekukonko/tablewriter"
+	"github.com/streadway/amqp"
 	"github.com/thrasher-/gocryptotrader/config"
 	"github.com/thrasher-/gocryptotrader/exchanges/kraken"
 	"github.com/thrasher-/gocryptotrader/exchanges/liqui"
+
+	"flag"
 )
+
+var (
+	uri          = flag.String("uri", "amqp://developer:xLae4pzT@hc-amqp.dev:5672/hc", "AMQP URI")
+	exchangeName = flag.String("exchange", "arbitrage.fanout", "Durable AMQP exchange name")
+	exchangeType = flag.String("exchange-type", "fanout", "Exchange type - direct|fanout|topic|x-custom")
+	routingKey   = flag.String("key", "test-key", "AMQP routing key")
+	body         = flag.String("body", "foobar", "Body of message")
+	reliable     = flag.Bool("reliable", true, "Wait for the publisher confirmation before exiting")
+)
+
+func init() {
+	flag.Parse()
+}
 
 func main() {
 
@@ -45,14 +63,10 @@ func main() {
 	mashup := core.ExchangeMashup{}
 	mashup.Init(exchanges)
 
-	from := core.Currency("ETH")
+	from := core.Currency("BTC")
 	to := from
 	depth := 3
 	nodes, paths, _ := graph.PathFinder(mashup, from, to, depth)
-
-	table := tablewriter.NewWriter(os.Stdout)
-	table.SetHeader([]string{"Link 1", "Link 2", "Link 3", "Performance", "Input", "Output", "Result"})
-	table.Render()
 
 	// Create a map
 	pairsLookup := make(map[string][]graph.NodeLookup)
@@ -75,8 +89,24 @@ func main() {
 	delayBetweenReqs["Kraken"] = time.Duration(500)
 	delayBetweenReqs["Liqui"] = time.Duration(500)
 
-	// conn, err := amqp.Dial("amqp://developer:xLae4pzT@gotrading-rabbitmq.dev:5672/gotrading")
-	// defer conn.Close()
+	conn, err := amqp.Dial("amqp://developer:xLae4pzT@hc-amqp.dev:5672/hc")
+	failOnError(err, "Failed to connect to RabbitMQ")
+	defer conn.Close()
+
+	ch, err := conn.Channel()
+	failOnError(err, "Failed to open a channel")
+	defer ch.Close()
+
+	err = ch.ExchangeDeclare(
+		"arbitrage.routing", // name
+		"topic",             // type
+		true,                // durable
+		false,               // auto-deleted
+		false,               // internal
+		false,               // no-wait
+		nil,                 // arguments
+	)
+	failOnError(err, "Failed to declare an exchange")
 
 	for _, exch := range exchanges {
 		nodes := pairsLookup[exch.Name]
@@ -88,7 +118,7 @@ func main() {
 					continue
 				}
 				ordersCount := len(chain.Path.ContextualNodes)
-				row := make([]string, ordersCount+4)
+				row := make([]string, ordersCount+5)
 				for j, node := range chain.Path.ContextualNodes {
 					row[j] = node.Description()
 				}
@@ -96,14 +126,131 @@ func main() {
 				row[ordersCount+1] = strconv.FormatFloat(chain.Volume, 'f', 6, 64)
 				row[ordersCount+2] = strconv.FormatFloat(chain.Volume*chain.Performance, 'f', 6, 64)
 				row[ordersCount+3] = strconv.FormatFloat(chain.Volume*chain.Performance-chain.Volume, 'f', 6, 64)
+
+				t := time.Now()
+				row[ordersCount+4] = t.Format("2006-01-02 15:04:05")
 				rows = append(rows, row)
+				fmt.Println(strings.Join(row[:], ","))
+
+				marshal, _ := json.Marshal(chain)
+
+				err = ch.Publish(
+					"arbitrage.routing", // exchange
+					"usd.btc",           // routing key
+					false,               // mandatory
+					false,               // immediate
+					amqp.Publishing{
+						ContentType: "text/plain",
+						Body:        []byte(marshal),
+					})
 			}
 			if len(rows) > 0 {
-				table.AppendBulk(rows)
-				table.Render()
+				// table.AppendBulk(rows)
+				// table.Render()
 			}
 		})
 	}
 
 	<-interrupt
+}
+
+// This example declares a durable Exchange, and publishes a single message to
+// that Exchange with a given routing key.
+//
+
+func severityFrom(args []string) string {
+	var s string
+	if (len(args) < 2) || os.Args[1] == "" {
+		s = "anonymous.info"
+	} else {
+		s = os.Args[1]
+	}
+	return s
+}
+
+func failOnError(err error, msg string) {
+	if err != nil {
+		log.Fatalf("%s: %s", msg, err)
+		panic(fmt.Sprintf("%s: %s", msg, err))
+	}
+}
+
+func publish(amqpURI, exchange, exchangeType, routingKey, body string, reliable bool) error {
+
+	// This function dials, connects, declares, publishes, and tears down,
+	// all in one go. In a real service, you probably want to maintain a
+	// long-lived connection as state, and publish against that.
+
+	log.Printf("dialing %q", amqpURI)
+	connection, err := amqp.Dial(amqpURI)
+	if err != nil {
+		return fmt.Errorf("Dial: %s", err)
+	}
+	defer connection.Close()
+
+	log.Printf("got Connection, getting Channel")
+	channel, err := connection.Channel()
+	if err != nil {
+		return fmt.Errorf("Channel: %s", err)
+	}
+
+	log.Printf("got Channel, declaring %q Exchange (%q)", exchangeType, exchange)
+	if err := channel.ExchangeDeclare(
+		exchange,     // name
+		exchangeType, // type
+		true,         // durable
+		false,        // auto-deleted
+		false,        // internal
+		false,        // noWait
+		nil,          // arguments
+	); err != nil {
+		return fmt.Errorf("Exchange Declare: %s", err)
+	}
+
+	// Reliable publisher confirms require confirm.select support from the
+	// connection.
+	if reliable {
+		log.Printf("enabling publishing confirms.")
+		if err := channel.Confirm(false); err != nil {
+			return fmt.Errorf("Channel could not be put into confirm mode: %s", err)
+		}
+
+		confirms := channel.NotifyPublish(make(chan amqp.Confirmation, 1))
+
+		defer confirmOne(confirms)
+	}
+
+	log.Printf("declared Exchange, publishing %dB body (%q)", len(body), body)
+	if err = channel.Publish(
+		exchange,   // publish to an exchange
+		routingKey, // routing to 0 or more queues
+		false,      // mandatory
+		false,      // immediate
+		amqp.Publishing{
+			Headers:         amqp.Table{},
+			ContentType:     "text/plain",
+			ContentEncoding: "",
+			Body:            []byte(body),
+			DeliveryMode:    amqp.Transient, // 1=non-persistent, 2=persistent
+			Priority:        0,              // 0-9
+			// a bunch of application/implementation-specific fields
+		},
+	); err != nil {
+		return fmt.Errorf("Exchange Publish: %s", err)
+	}
+
+	return nil
+}
+
+// One would typically keep a channel of publishings, a sequence number, and a
+// set of unacknowledged sequence numbers and loop until the publishing channel
+// is closed.
+func confirmOne(confirms <-chan amqp.Confirmation) {
+	log.Printf("waiting for confirmation of one publishing")
+
+	if confirmed := <-confirms; confirmed.Ack {
+		log.Printf("confirmed delivery with delivery tag: %d", confirmed.DeliveryTag)
+	} else {
+		log.Printf("failed delivery of delivery tag: %d", confirmed.DeliveryTag)
+	}
 }

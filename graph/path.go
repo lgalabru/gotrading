@@ -1,9 +1,25 @@
 package graph
 
-import "fmt"
+import (
+	"crypto/sha1"
+	"encoding/hex"
+	"fmt"
+)
 
 type Path struct {
-	ContextualNodes []*ContextualNode
+	ContextualNodes []*ContextualNode `json:"node"`
+	Id              *string           `json:"id"`
+	Name            *string           `json:"description"`
+}
+
+func (p *Path) encode() {
+	desc := p.Description()
+	p.Name = &desc
+
+	h := sha1.New()
+	h.Write([]byte(desc))
+	enc := hex.EncodeToString(h.Sum(nil))
+	p.Id = &enc
 }
 
 func (p Path) contains(n ContextualNode) bool {

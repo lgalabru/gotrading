@@ -8,9 +8,9 @@ import (
 )
 
 type Exchange struct {
-	Name           string
-	AvailablePairs []CurrencyPair
-	Engine         *ExchangeInterface
+	Name           string             `json:"name"`
+	AvailablePairs []CurrencyPair     `json:"-"`
+	Engine         *ExchangeInterface `json:"-"`
 }
 
 type ExchangeInterface interface {

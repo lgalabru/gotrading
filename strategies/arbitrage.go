@@ -15,8 +15,8 @@ type Arbitrage struct {
 type ArbitrageChain struct {
 	Path            graph.Path
 	OrdersToFulfill []core.Order
-	Performance     float64
-	Volume          float64
+	Performance     float64 `json:"performance"`
+	Volume          float64 `json:"volume"`
 }
 
 func (arbitrage *Arbitrage) Run(paths []graph.Path) []ArbitrageChain {

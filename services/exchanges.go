@@ -37,14 +37,11 @@ func StartPollingOrderbooks(exch core.Exchange, nodes []graph.NodeLookup, delayB
 		cp := pair.NewCurrencyPair(string(n.Node.From), string(n.Node.To))
 		src, err := (*exch.Engine).UpdateOrderbook(cp, "SPOT")
 		if err == nil {
-			dst := n.Node.Orderbook
-			if dst == nil {
-				dst = &core.Orderbook{}
-				dst.CurrencyPair = core.CurrencyPair{n.Node.From, n.Node.To}
-				dst.Bids = make([]core.Order, 0)
-				dst.Asks = make([]core.Order, 0)
-				n.Node.Orderbook = dst
-			}
+			dst := &core.Orderbook{}
+			dst.CurrencyPair = core.CurrencyPair{n.Node.From, n.Node.To}
+			dst.Bids = make([]core.Order, 0)
+			dst.Asks = make([]core.Order, 0)
+
 			// fmt.Println("1 ------------------")
 			// fmt.Println(src.Asks)
 			for _, ask := range src.Asks {
@@ -63,6 +60,7 @@ func StartPollingOrderbooks(exch core.Exchange, nodes []graph.NodeLookup, delayB
 				dst.Bids = append(dst.Bids, core.Order{bid.Price, bid.Amount, core.Buy})
 				// }
 			}
+			n.Node.Orderbook = dst
 
 			// fmt.Println("~~~~~~~~~~~~~~~~~~")
 			fn(*n.Node)

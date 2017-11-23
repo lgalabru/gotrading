@@ -1,6 +1,6 @@
 package core
 
 type CurrencyPair struct {
-	From Currency
-	To   Currency
+	From Currency `json:"from"`
+	To   Currency `json:"to"`
 }

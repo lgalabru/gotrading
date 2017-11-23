@@ -17,7 +17,7 @@ func PathFinder(mashup core.ExchangeMashup, from core.Currency, to core.Currency
 				if n != nil {
 					n.SoldCurrency = &from
 					n.BoughtCurrency = &to
-					rawPaths = append(findPaths(mashup, depth, Path{[]*ContextualNode{n}}, lookup, cLookup), rawPaths...)
+					rawPaths = append(findPaths(mashup, depth, Path{[]*ContextualNode{n}, nil, nil}, lookup, cLookup), rawPaths...)
 				}
 			}
 		}
@@ -32,6 +32,7 @@ func PathFinder(mashup core.ExchangeMashup, from core.Currency, to core.Currency
 				nodes = append(nodes, cn.Node)
 				p = make([]Path, 0)
 			}
+			path.encode()
 			paths[cn.Node.ID()] = append(p, path)
 		}
 	}
@@ -61,7 +62,7 @@ func findPaths(m core.ExchangeMashup, depth int, p Path, lookup map[string]*Node
 						n.BoughtCurrency = &to
 						n.SoldCurrency = from
 						if p.contains(*n) == false && len(p.ContextualNodes) < depth {
-							r := findPaths(m, depth, Path{append(p.ContextualNodes, n)}, lookup, cLookup)
+							r := findPaths(m, depth, Path{append(p.ContextualNodes, n), nil, nil}, lookup, cLookup)
 							paths = append(r, paths...)
 						}
 					}

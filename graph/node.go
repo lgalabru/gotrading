@@ -7,17 +7,17 @@ import (
 )
 
 type Node struct {
-	From      core.Currency
-	To        core.Currency
-	Exchange  core.Exchange
-	Orderbook *core.Orderbook
+	From      core.Currency   `json:"from"`
+	To        core.Currency   `json:"to"`
+	Exchange  core.Exchange   `json:"exchange"`
+	Orderbook *core.Orderbook `json:"-"`
 }
 
 type ContextualNode struct {
-	Node           *Node
-	Inverted       bool
-	SoldCurrency   *core.Currency
-	BoughtCurrency *core.Currency
+	Node           *Node          `json:"content"`
+	Inverted       bool           `json:"inverted"`
+	SoldCurrency   *core.Currency `json:"sold_currency"`
+	BoughtCurrency *core.Currency `json:"bought_currency"`
 }
 
 type NodeLookup struct {
