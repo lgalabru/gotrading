@@ -11,7 +11,7 @@ import (
 	"github.com/thrasher-/gocryptotrader/currency/pair"
 )
 
-type orderbookReceived func(node graph.Node)
+type orderbookReceived func(endpoint graph.Endpoint)
 
 func LoadExchange(cfg *config.Config, name string, exch core.ExchangeInterface) core.Exchange {
 	config, _ := cfg.GetExchangeConfig(name)
@@ -27,18 +27,18 @@ func LoadExchange(cfg *config.Config, name string, exch core.ExchangeInterface) 
 	return core.Exchange{name, pairs, &exch}
 }
 
-func StartPollingOrderbooks(exch core.Exchange, nodes []graph.NodeLookup, delayBetweenReqs time.Duration, fn orderbookReceived) {
+func StartPollingOrderbooks(exch core.Exchange, nodes []graph.EndpointLookup, delayBetweenReqs time.Duration, fn orderbookReceived) {
 	var i = int(0)
 	for {
 		n := nodes[i%len(nodes)]
 		i += 1
 		time.Sleep(delayBetweenReqs * time.Millisecond)
 
-		cp := pair.NewCurrencyPair(string(n.Node.From), string(n.Node.To))
+		cp := pair.NewCurrencyPair(string(n.Endpoint.From), string(n.Endpoint.To))
 		src, err := (*exch.Engine).UpdateOrderbook(cp, "SPOT")
 		if err == nil {
 			dst := &core.Orderbook{}
-			dst.CurrencyPair = core.CurrencyPair{n.Node.From, n.Node.To}
+			dst.CurrencyPair = core.CurrencyPair{n.Endpoint.From, n.Endpoint.To}
 			dst.Bids = make([]core.Order, 0)
 			dst.Asks = make([]core.Order, 0)
 
@@ -48,7 +48,7 @@ func StartPollingOrderbooks(exch core.Exchange, nodes []graph.NodeLookup, delayB
 				// if exch.Name == "Poloniex" {
 				// 	dst.Bids = append(dst.Bids, core.Order{1 / ask.Price, ask.Amount, core.Buy})
 				// } else {
-				dst.Asks = append(dst.Asks, core.Order{ask.Price, ask.Amount, core.Sell})
+				dst.Asks = append(dst.Asks, core.NewAsk(dst.CurrencyPair, ask.Price, ask.Amount))
 				// }
 			}
 			// fmt.Println("2 ------------------")
@@ -57,15 +57,15 @@ func StartPollingOrderbooks(exch core.Exchange, nodes []graph.NodeLookup, delayB
 				// if exch.Name == "Poloniex" {
 				// 	dst.Asks = append(dst.Asks, core.Order{1 / bid.Price, bid.Amount, core.Sell})
 				// } else {
-				dst.Bids = append(dst.Bids, core.Order{bid.Price, bid.Amount, core.Buy})
+				dst.Bids = append(dst.Bids, core.NewBid(dst.CurrencyPair, bid.Price, bid.Amount))
 				// }
 			}
-			n.Node.Orderbook = dst
+			n.Endpoint.Orderbook = dst
 
 			// fmt.Println("~~~~~~~~~~~~~~~~~~")
-			fn(*n.Node)
+			fn(*n.Endpoint)
 		} else {
-			fmt.Println("Error", n.Node.Description(), err)
+			fmt.Println("Error", n.Endpoint.Description(), err)
 		}
 	}
 }

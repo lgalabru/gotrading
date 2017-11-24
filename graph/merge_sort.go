@@ -1,7 +1,7 @@
 package graph
 
-func Merge(l, r []NodeLookup) []NodeLookup {
-	ret := make([]NodeLookup, 0, len(l)+len(r))
+func Merge(l, r []EndpointLookup) []EndpointLookup {
+	ret := make([]EndpointLookup, 0, len(l)+len(r))
 	for len(l) > 0 || len(r) > 0 {
 		if len(l) == 0 {
 			return append(ret, r...)
@@ -20,7 +20,7 @@ func Merge(l, r []NodeLookup) []NodeLookup {
 	return ret
 }
 
-func MergeSort(s []NodeLookup) []NodeLookup {
+func MergeSort(s []EndpointLookup) []EndpointLookup {
 	if len(s) <= 1 {
 		return s
 	}

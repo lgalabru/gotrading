@@ -7,9 +7,9 @@ import (
 )
 
 type Path struct {
-	ContextualNodes []*ContextualNode `json:"node"`
-	Id              *string           `json:"id"`
-	Name            *string           `json:"description"`
+	Nodes []*Node `json:"nodes"`
+	Id    *string `json:"id"`
+	Name  *string `json:"description"`
 }
 
 func (p *Path) encode() {
@@ -22,9 +22,9 @@ func (p *Path) encode() {
 	p.Id = &enc
 }
 
-func (p Path) contains(n ContextualNode) bool {
+func (p Path) contains(n Node) bool {
 	found := false
-	for _, m := range p.ContextualNodes {
+	for _, m := range p.Nodes {
 		found = n.isEqual(*m)
 	}
 	return found
@@ -32,7 +32,7 @@ func (p Path) contains(n ContextualNode) bool {
 
 func (p Path) Description() string {
 	str := ""
-	for _, n := range p.ContextualNodes {
+	for _, n := range p.Nodes {
 		str += n.Description() + " -> "
 	}
 	return str

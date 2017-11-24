@@ -69,18 +69,18 @@ func main() {
 	nodes, paths, _ := graph.PathFinder(mashup, from, to, depth)
 
 	// Create a map
-	pairsLookup := make(map[string][]graph.NodeLookup)
+	endpointLookup := make(map[string][]graph.EndpointLookup)
 	for _, n := range nodes {
 		paths := paths[n.ID()]
-		lookups, ok := pairsLookup[n.Exchange.Name]
+		lookups, ok := endpointLookup[n.Exchange.Name]
 		if !ok {
-			lookups = make([]graph.NodeLookup, 0)
+			lookups = make([]graph.EndpointLookup, 0)
 		}
-		lookup := graph.NodeLookup{n, len(paths)}
-		pairsLookup[n.Exchange.Name] = append(lookups, lookup)
+		lookup := graph.EndpointLookup{n, len(paths)}
+		endpointLookup[n.Exchange.Name] = append(lookups, lookup)
 	}
 	for _, exch := range exchanges {
-		pairsLookup[exch.Name] = graph.MergeSort(pairsLookup[exch.Name])
+		endpointLookup[exch.Name] = graph.MergeSort(endpointLookup[exch.Name])
 	}
 
 	arbitrage := strategies.Arbitrage{}
@@ -109,19 +109,20 @@ func main() {
 	failOnError(err, "Failed to declare an exchange")
 
 	for _, exch := range exchanges {
-		nodes := pairsLookup[exch.Name]
-		go services.StartPollingOrderbooks(exch, nodes, delayBetweenReqs[exch.Name], func(n graph.Node) {
+		nodes := endpointLookup[exch.Name]
+		go services.StartPollingOrderbooks(exch, nodes, delayBetweenReqs[exch.Name], func(n graph.Endpoint) {
 			chains := arbitrage.Run(paths[n.ID()])
 			rows := make([][]string, 0)
 			for _, chain := range chains {
 				if chain.Performance == 0 {
 					continue
 				}
-				ordersCount := len(chain.Path.ContextualNodes)
+				ordersCount := len(chain.Path.Nodes)
 				row := make([]string, ordersCount+5)
-				for j, node := range chain.Path.ContextualNodes {
+				for j, node := range chain.Path.Nodes {
 					row[j] = node.Description()
 				}
+
 				row[ordersCount] = strconv.FormatFloat(chain.Performance, 'f', 6, 64)
 				row[ordersCount+1] = strconv.FormatFloat(chain.Volume, 'f', 6, 64)
 				row[ordersCount+2] = strconv.FormatFloat(chain.Volume*chain.Performance, 'f', 6, 64)

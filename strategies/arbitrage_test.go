@@ -40,28 +40,32 @@ When I fulfill all the orders, running the arbitrage`, func() {
 				def := core.Currency("DEF")
 				xyz := core.Currency("XYZ")
 
-				bids1 := append([]core.Order{}, core.Order{10, 1, core.Buy})
-				asks1 := append([]core.Order{}, core.Order{10, 1, core.Sell})
-				bids2 := append([]core.Order{}, core.Order{10, 10, core.Buy})
-				asks2 := append([]core.Order{}, core.Order{10, 1, core.Sell})
-				bids3 := append([]core.Order{}, core.Order{0.01, 100, core.Buy})
-				asks3 := append([]core.Order{}, core.Order{0.01, 1, core.Sell})
+				pair1 := core.CurrencyPair{abc, def}
+				pair2 := core.CurrencyPair{def, xyz}
+				pair3 := core.CurrencyPair{xyz, abc}
 
-				ob1 = core.Orderbook{core.CurrencyPair{abc, def}, bids1, asks1}
-				ob2 = core.Orderbook{core.CurrencyPair{def, xyz}, bids2, asks2}
-				ob3 = core.Orderbook{core.CurrencyPair{xyz, abc}, bids3, asks3}
+				bids1 := append([]core.Order{}, core.NewBid(pair1, 10, 1))
+				asks1 := append([]core.Order{}, core.NewAsk(pair1, 10, 1))
+				bids2 := append([]core.Order{}, core.NewBid(pair2, 10, 10))
+				asks2 := append([]core.Order{}, core.NewAsk(pair2, 10, 1))
+				bids3 := append([]core.Order{}, core.NewBid(pair3, 0.01, 100))
+				asks3 := append([]core.Order{}, core.NewAsk(pair3, 0.01, 1))
 
-				node1 := graph.Node{abc, def, exchange1, &ob1}
-				node2 := graph.Node{def, xyz, exchange1, &ob2}
-				node3 := graph.Node{xyz, abc, exchange1, &ob3}
+				ob1 = core.Orderbook{pair1, bids1, asks1}
+				ob2 = core.Orderbook{pair2, bids2, asks2}
+				ob3 = core.Orderbook{pair3, bids3, asks3}
 
-				cnodes := make([]*graph.ContextualNode, 3)
-				cnodes[0] = &(graph.ContextualNode{&node1, false, &abc, &def})
-				cnodes[1] = &(graph.ContextualNode{&node2, false, &def, &xyz})
-				cnodes[2] = &(graph.ContextualNode{&node3, false, &xyz, &abc})
+				endpoint1 := graph.Endpoint{abc, def, exchange1, &ob1}
+				endpoint2 := graph.Endpoint{def, xyz, exchange1, &ob2}
+				endpoint3 := graph.Endpoint{xyz, abc, exchange1, &ob3}
+
+				nodes := make([]*graph.Node, 3)
+				nodes[0] = &(graph.Node{&endpoint1, true, &abc, &def})
+				nodes[1] = &(graph.Node{&endpoint2, true, &def, &xyz})
+				nodes[2] = &(graph.Node{&endpoint3, true, &xyz, &abc})
 
 				paths = make([]graph.Path, 1)
-				paths[0] = graph.Path{cnodes, nil, nil}
+				paths[0] = graph.Path{nodes, nil, nil}
 
 				chains = arbitrage.Run(paths)
 			})
@@ -95,7 +99,7 @@ When I fulfill all the orders, running the arbitrage`, func() {
 			})
 
 			It("should return one chain enforcing the initial volume to 0.1 if only 10 XYZ are available", func() {
-				ob3.Bids[0].Volume = 10
+				ob3.Bids[0].BaseVolume = 10
 				chains = arbitrage.Run(paths)
 				c := chains[0]
 				Expect(c.Volume).To(Equal(0.1))
