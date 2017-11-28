@@ -10,7 +10,7 @@ type Endpoint struct {
 	From      core.Currency   `json:"from"`
 	To        core.Currency   `json:"to"`
 	Exchange  core.Exchange   `json:"exchange"`
-	Orderbook *core.Orderbook `json:"-"`
+	Orderbook *core.Orderbook `json:"orderbook"`
 }
 
 type EndpointLookup struct {

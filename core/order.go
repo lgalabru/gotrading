@@ -52,9 +52,20 @@ func NewBid(pair CurrencyPair, price float64, baseVolume float64) Order {
 func (o *Order) Init(pair CurrencyPair, price float64, baseVolume float64) {
 	o.Pair = pair
 	o.Price = price
-	o.BaseVolume = baseVolume
 	o.PriceOfQuoteToBase = 1 / price
+	o.UpdateBaseVolume(baseVolume)
+}
+
+// UpdateBaseVolume cascade update on BaseVolume and QuoteVolume
+func (o *Order) UpdateBaseVolume(baseVolume float64) {
+	o.BaseVolume = baseVolume
 	o.QuoteVolume = o.Price * o.BaseVolume
+}
+
+// UpdateQuoteVolume cascade update on BaseVolume and QuoteVolume
+func (o *Order) UpdateQuoteVolume(quoteVolume float64) {
+	o.QuoteVolume = quoteVolume
+	o.BaseVolume = o.QuoteVolume / o.Price
 }
 
 // CreateMatchingAsk returns an Ask order matching the current Bid (crossing ths spread)

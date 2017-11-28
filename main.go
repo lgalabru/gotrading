@@ -124,9 +124,9 @@ func main() {
 				}
 
 				row[ordersCount] = strconv.FormatFloat(chain.Performance, 'f', 6, 64)
-				row[ordersCount+1] = strconv.FormatFloat(chain.Volume, 'f', 6, 64)
-				row[ordersCount+2] = strconv.FormatFloat(chain.Volume*chain.Performance, 'f', 6, 64)
-				row[ordersCount+3] = strconv.FormatFloat(chain.Volume*chain.Performance-chain.Volume, 'f', 6, 64)
+				row[ordersCount+1] = strconv.FormatFloat(chain.VolumeToEngage, 'f', 6, 64)
+				row[ordersCount+2] = strconv.FormatFloat(chain.VolumeToEngage*chain.Performance, 'f', 6, 64)
+				row[ordersCount+3] = strconv.FormatFloat(chain.VolumeToEngage*chain.Performance-chain.VolumeToEngage, 'f', 6, 64)
 
 				t := time.Now()
 				row[ordersCount+4] = t.Format("2006-01-02 15:04:05")
