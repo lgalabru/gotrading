@@ -5,10 +5,10 @@ import (
 )
 
 type Node struct {
-	Endpoint       *Endpoint      `json:"endpoint"`
-	IsBaseToQuote  bool           `json:"isBaseToQuote"`
-	SoldCurrency   *core.Currency `json:"soldCurrency"`
-	BoughtCurrency *core.Currency `json:"boughtCurrency"`
+	Endpoint       *Endpoint     `json:"endpoint"`
+	IsBaseToQuote  bool          `json:"isBaseToQuote"`
+	SoldCurrency   core.Currency `json:"soldCurrency"`
+	BoughtCurrency core.Currency `json:"boughtCurrency"`
 }
 
 func (n Node) isEqual(m Node) bool {

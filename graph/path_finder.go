@@ -15,8 +15,6 @@ func PathFinder(mashup core.ExchangeMashup, from core.Currency, to core.Currency
 			for _, exch := range mashup.Exchanges {
 				n, endpointLookup, nodeLookup := nodeFromMashup(from, to, exch, mashup, endpointLookup, nodeLookup)
 				if n != nil {
-					n.SoldCurrency = &from
-					n.BoughtCurrency = &to
 					rawPaths = append(findPaths(mashup, depth, Path{[]*Node{n}, nil, nil}, endpointLookup, nodeLookup), rawPaths...)
 				}
 			}
@@ -44,26 +42,38 @@ func PathFinder(mashup core.ExchangeMashup, from core.Currency, to core.Currency
 
 func findPaths(m core.ExchangeMashup, depth int, p Path, endpointLookup map[string]*Endpoint, nodeLookup map[string]*Node) []Path {
 	var paths []Path
-	// fmt.Println(p.Description())
+	firstNode := p.Nodes[0]
 	lastNode := p.Nodes[len(p.Nodes)-1]
+
 	if len(p.Nodes) == depth {
-		from := p.Nodes[0].SoldCurrency
+		from := firstNode.SoldCurrency
 		to := lastNode.BoughtCurrency
-		if *from == *to {
-			return []Path{p}
+		if from == to {
+			paths = []Path{p}
 		}
 	} else if len(p.Nodes) < depth {
 		from := lastNode.BoughtCurrency
 		for _, to := range m.Currencies {
-			if to != *from {
+			if to != from {
 				for _, exch := range m.Exchanges {
-					n, endpointLookup, nodeLookup := nodeFromMashup(*from, to, exch, m, endpointLookup, nodeLookup)
+					n, endpointLookup, nodeLookup := nodeFromMashup(from, to, exch, m, endpointLookup, nodeLookup)
 					if n != nil {
-						n.BoughtCurrency = &to
-						n.SoldCurrency = from
-						if p.contains(*n) == false && len(p.Nodes) < depth {
-							r := findPaths(m, depth, Path{append(p.Nodes, n), nil, nil}, endpointLookup, nodeLookup)
-							paths = append(r, paths...)
+						firstFrom := firstNode.SoldCurrency
+						nextTo := n.BoughtCurrency
+						if (nextTo == firstFrom) && p.contains(*n) == false {
+							pathToEvaluate := Path{append(p.Nodes, n), nil, nil}
+							candidates := findPaths(m, depth, pathToEvaluate, endpointLookup, nodeLookup)
+							if len(candidates) > 0 {
+								paths = append(paths, candidates...)
+							}
+						} else if len(p.Nodes) < depth-1 {
+							if p.contains(*n) == false {
+								pathToEvaluate := Path{append(p.Nodes, n), nil, nil}
+								candidates := findPaths(m, depth, pathToEvaluate, endpointLookup, nodeLookup)
+								if len(candidates) > 0 {
+									paths = append(paths, candidates...)
+								}
+							}
 						}
 					}
 				}
@@ -74,16 +84,19 @@ func findPaths(m core.ExchangeMashup, depth int, p Path, endpointLookup map[stri
 }
 
 func nodeFromMashup(from core.Currency, to core.Currency, exchange core.Exchange, mashup core.ExchangeMashup, endpointLookup map[string]*Endpoint, nodeLookup map[string]*Node) (*Node, map[string]*Endpoint, map[string]*Node) {
-	var n *Node = nil
+	var n *Node
 	ok := mashup.LinkExist(from, to, exchange)
 	if ok {
-		proto := Endpoint{from, to, exchange, nil}
+		var base, quote core.Currency
+		base = from
+		quote = to
+		proto := Endpoint{base, quote, exchange, nil}
 		endpoint, ok := endpointLookup[proto.ID()]
 		if !ok {
 			endpointLookup[proto.ID()] = &proto
 			endpoint = &proto
 		}
-		cproto := Node{endpoint, true, nil, nil}
+		cproto := Node{endpoint, true, from, to}
 		node, ok := nodeLookup[cproto.ID()]
 		if !ok {
 			nodeLookup[cproto.ID()] = &cproto
@@ -93,13 +106,16 @@ func nodeFromMashup(from core.Currency, to core.Currency, exchange core.Exchange
 	} else {
 		ok := mashup.LinkExist(to, from, exchange)
 		if ok {
-			proto := Endpoint{to, from, exchange, nil}
+			var base, quote core.Currency
+			base = to
+			quote = from
+			proto := Endpoint{base, quote, exchange, nil}
 			endpoint, ok := endpointLookup[proto.ID()]
 			if !ok {
 				endpointLookup[proto.ID()] = &proto
 				endpoint = &proto
 			}
-			cproto := Node{endpoint, false, nil, nil}
+			cproto := Node{endpoint, false, from, to}
 			node, ok := nodeLookup[cproto.ID()]
 			if !ok {
 				nodeLookup[cproto.ID()] = &cproto
