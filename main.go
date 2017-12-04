@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
 	"os"
@@ -14,8 +13,8 @@ import (
 	"gotrading/services"
 	"gotrading/strategies"
 
-	"github.com/streadway/amqp"
 	"github.com/thrasher-/gocryptotrader/config"
+	"github.com/thrasher-/gocryptotrader/exchanges/bittrex"
 	"github.com/thrasher-/gocryptotrader/exchanges/kraken"
 	"github.com/thrasher-/gocryptotrader/exchanges/liqui"
 
@@ -47,18 +46,21 @@ func main() {
 
 	liquiEngine := new(liqui.Liqui)
 	krakenEngine := new(kraken.Kraken)
-	// bittrexEngine := new(bittrex.Bittrex)
+	bittrexEngine := new(bittrex.Bittrex)
 	// gdaxEngine := new(gdax.GDAX)
 	// poloniexEngine := new(poloniex.Poloniex)
 
 	liqui := services.LoadExchange(cfg, "Liqui", liquiEngine)
 	kraken := services.LoadExchange(cfg, "Kraken", krakenEngine)
-	// bittrex := services.LoadExchange(cfg, "Bittrex", bittrexEngine)
+	bittrex := services.LoadExchange(cfg, "Bittrex", bittrexEngine)
 	// poloniex := services.LoadExchange(cfg, "Poloniex", poloniexEngine)
 	// gdax := services.LoadExchange(cfg, "GDAX", gdaxEngine)
+	bittrex.IsCurrencyPairNormalized = false
+	kraken.IsCurrencyPairNormalized = true
 
 	// exchanges := []core.Exchange{kraken, liqui, gdax, bittrex}
-	exchanges := []core.Exchange{kraken, liqui}
+	// exchanges := []core.Exchange{kraken, liqui}
+	exchanges := []core.Exchange{liqui}
 
 	mashup := core.ExchangeMashup{}
 	mashup.Init(exchanges)
@@ -155,103 +157,9 @@ func main() {
 	<-interrupt
 }
 
-// This example declares a durable Exchange, and publishes a single message to
-// that Exchange with a given routing key.
-//
-
-func severityFrom(args []string) string {
-	var s string
-	if (len(args) < 2) || os.Args[1] == "" {
-		s = "anonymous.info"
-	} else {
-		s = os.Args[1]
-	}
-	return s
-}
-
 func failOnError(err error, msg string) {
 	if err != nil {
 		log.Fatalf("%s: %s", msg, err)
 		panic(fmt.Sprintf("%s: %s", msg, err))
-	}
-}
-
-func publish(amqpURI, exchange, exchangeType, routingKey, body string, reliable bool) error {
-
-	// This function dials, connects, declares, publishes, and tears down,
-	// all in one go. In a real service, you probably want to maintain a
-	// long-lived connection as state, and publish against that.
-
-	log.Printf("dialing %q", amqpURI)
-	connection, err := amqp.Dial(amqpURI)
-	if err != nil {
-		return fmt.Errorf("Dial: %s", err)
-	}
-	defer connection.Close()
-
-	log.Printf("got Connection, getting Channel")
-	channel, err := connection.Channel()
-	if err != nil {
-		return fmt.Errorf("Channel: %s", err)
-	}
-
-	log.Printf("got Channel, declaring %q Exchange (%q)", exchangeType, exchange)
-	if err := channel.ExchangeDeclare(
-		exchange,     // name
-		exchangeType, // type
-		true,         // durable
-		false,        // auto-deleted
-		false,        // internal
-		false,        // noWait
-		nil,          // arguments
-	); err != nil {
-		return fmt.Errorf("Exchange Declare: %s", err)
-	}
-
-	// Reliable publisher confirms require confirm.select support from the
-	// connection.
-	if reliable {
-		log.Printf("enabling publishing confirms.")
-		if err := channel.Confirm(false); err != nil {
-			return fmt.Errorf("Channel could not be put into confirm mode: %s", err)
-		}
-
-		confirms := channel.NotifyPublish(make(chan amqp.Confirmation, 1))
-
-		defer confirmOne(confirms)
-	}
-
-	log.Printf("declared Exchange, publishing %dB body (%q)", len(body), body)
-	if err = channel.Publish(
-		exchange,   // publish to an exchange
-		routingKey, // routing to 0 or more queues
-		false,      // mandatory
-		false,      // immediate
-		amqp.Publishing{
-			Headers:         amqp.Table{},
-			ContentType:     "text/plain",
-			ContentEncoding: "",
-			Body:            []byte(body),
-			DeliveryMode:    amqp.Transient, // 1=non-persistent, 2=persistent
-			Priority:        0,              // 0-9
-			// a bunch of application/implementation-specific fields
-		},
-	); err != nil {
-		return fmt.Errorf("Exchange Publish: %s", err)
-	}
-
-	return nil
-}
-
-// One would typically keep a channel of publishings, a sequence number, and a
-// set of unacknowledged sequence numbers and loop until the publishing channel
-// is closed.
-func confirmOne(confirms <-chan amqp.Confirmation) {
-	log.Printf("waiting for confirmation of one publishing")
-
-	if confirmed := <-confirms; confirmed.Ack {
-		log.Printf("confirmed delivery with delivery tag: %d", confirmed.DeliveryTag)
-	} else {
-		log.Printf("failed delivery of delivery tag: %d", confirmed.DeliveryTag)
 	}
 }

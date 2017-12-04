@@ -9,9 +9,10 @@ import (
 
 // Exchange represents an exchange and list the available pairs.
 type Exchange struct {
-	Name           string             `json:"name"`
-	AvailablePairs []CurrencyPair     `json:"-"`
-	Engine         *ExchangeInterface `json:"-"`
+	Name                     string             `json:"name"`
+	AvailablePairs           []CurrencyPair     `json:"-"`
+	Engine                   *ExchangeInterface `json:"-"`
+	IsCurrencyPairNormalized bool               `json:"-"`
 }
 
 // ExchangeInterface is an abstraction for using the engines from gocryptotrader.

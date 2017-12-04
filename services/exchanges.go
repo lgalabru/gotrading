@@ -24,16 +24,14 @@ func LoadExchange(cfg *config.Config, name string, exch core.ExchangeInterface) 
 			core.Currency(c.GetFirstCurrency()),
 			core.Currency(c.GetSecondCurrency())}
 	}
-	return core.Exchange{name, pairs, &exch}
+	return core.Exchange{name, pairs, &exch, true}
 }
 
 func StartPollingOrderbooks(exch core.Exchange, nodes []graph.EndpointLookup, delayBetweenReqs time.Duration, fn orderbookReceived) {
 	var i = int(0)
 	for {
 		n := nodes[i%len(nodes)]
-		i += 1
-		time.Sleep(delayBetweenReqs * time.Millisecond)
-
+		i++
 		cp := pair.NewCurrencyPair(string(n.Endpoint.From), string(n.Endpoint.To))
 		src, err := (*exch.Engine).UpdateOrderbook(cp, "SPOT")
 		if err == nil {
@@ -45,20 +43,20 @@ func StartPollingOrderbooks(exch core.Exchange, nodes []graph.EndpointLookup, de
 			// fmt.Println("1 ------------------")
 			// fmt.Println(src.Asks)
 			for _, ask := range src.Asks {
-				// if exch.Name == "Poloniex" {
-				// 	dst.Bids = append(dst.Bids, core.Order{1 / ask.Price, ask.Amount, core.Buy})
-				// } else {
-				dst.Asks = append(dst.Asks, core.NewAsk(dst.CurrencyPair, ask.Price, ask.Amount))
-				// }
+				if exch.IsCurrencyPairNormalized == true {
+					dst.Asks = append(dst.Asks, core.NewAsk(dst.CurrencyPair, ask.Price, ask.Amount))
+				} else {
+					// dst.Bids = append(dst.Bids, core.Order{1 / ask.Price, ask.Amount, core.Buy})
+				}
 			}
 			// fmt.Println("2 ------------------")
 			// fmt.Println(src.Bids)
 			for _, bid := range src.Bids {
-				// if exch.Name == "Poloniex" {
-				// 	dst.Asks = append(dst.Asks, core.Order{1 / bid.Price, bid.Amount, core.Sell})
-				// } else {
-				dst.Bids = append(dst.Bids, core.NewBid(dst.CurrencyPair, bid.Price, bid.Amount))
-				// }
+				if exch.IsCurrencyPairNormalized == true {
+					dst.Bids = append(dst.Bids, core.NewBid(dst.CurrencyPair, bid.Price, bid.Amount))
+				} else {
+					// dst.Bids = append(dst.Bids, core.Order{1 / ask.Price, ask.Amount, core.Buy})
+				}
 			}
 			n.Endpoint.Orderbook = dst
 
@@ -67,5 +65,6 @@ func StartPollingOrderbooks(exch core.Exchange, nodes []graph.EndpointLookup, de
 		} else {
 			fmt.Println("Error", n.Endpoint.Description(), err)
 		}
+		time.Sleep(delayBetweenReqs * time.Millisecond)
 	}
 }
