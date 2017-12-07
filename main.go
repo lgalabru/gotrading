@@ -59,8 +59,8 @@ func main() {
 	kraken.IsCurrencyPairNormalized = true
 
 	// exchanges := []core.Exchange{kraken, liqui, gdax, bittrex}
-	// exchanges := []core.Exchange{kraken, liqui}
-	exchanges := []core.Exchange{liqui}
+	exchanges := []core.Exchange{kraken, liqui}
+	// exchanges := []core.Exchange{liqui}
 
 	mashup := core.ExchangeMashup{}
 	mashup.Init(exchanges)
@@ -68,89 +68,80 @@ func main() {
 	from := core.Currency("BTC")
 	to := from
 	depth := 3
-	nodes, paths, _ := graph.PathFinder(mashup, from, to, depth)
+	treeOfPossibles, _, _, _ := graph.PathFinder(mashup, from, to, depth)
 
-	// Create a map
-	endpointLookup := make(map[string][]graph.EndpointLookup)
-	for _, n := range nodes {
-		paths := paths[n.ID()]
-		lookups, ok := endpointLookup[n.Exchange.Name]
-		if !ok {
-			lookups = make([]graph.EndpointLookup, 0)
-		}
-		lookup := graph.EndpointLookup{n, len(paths)}
-		endpointLookup[n.Exchange.Name] = append(lookups, lookup)
-	}
-	for _, exch := range exchanges {
-		endpointLookup[exch.Name] = graph.MergeSort(endpointLookup[exch.Name])
-	}
+	fmt.Println(treeOfPossibles.Description())
 
 	arbitrage := strategies.Arbitrage{}
 
 	delayBetweenReqs := make(map[string]time.Duration, len(exchanges))
-	delayBetweenReqs["Kraken"] = time.Duration(500)
-	delayBetweenReqs["Liqui"] = time.Duration(500)
+	delayBetweenReqs["Kraken"] = time.Duration(100)
+	delayBetweenReqs["Liqui"] = time.Duration(100)
+	delayBetweenReqs["Bittrex"] = time.Duration(100)
 
-	conn, err := amqp.Dial("amqp://developer:xLae4pzT@hc-amqp.dev:5672/hc")
-	failOnError(err, "Failed to connect to RabbitMQ")
-	defer conn.Close()
+	// Rabbit
+	// conn, err := amqp.Dial("amqp://developer:xLae4pzT@hc-amqp.dev:5672/hc")
+	// failOnError(err, "Failed to connect to RabbitMQ")
+	// defer conn.Close()
 
-	ch, err := conn.Channel()
-	failOnError(err, "Failed to open a channel")
-	defer ch.Close()
+	// ch, err := conn.Channel()
+	// failOnError(err, "Failed to open a channel")
+	// defer ch.Close()
 
-	err = ch.ExchangeDeclare(
-		"arbitrage.routing", // name
-		"topic",             // type
-		true,                // durable
-		false,               // auto-deleted
-		false,               // internal
-		false,               // no-wait
-		nil,                 // arguments
-	)
-	failOnError(err, "Failed to declare an exchange")
+	// err = ch.ExchangeDeclare(
+	// 	"arbitrage.routing", // name
+	// 	"topic",             // type
+	// 	true,                // durable
+	// 	false,               // auto-deleted
+	// 	false,               // internal
+	// 	false,               // no-wait
+	// 	nil,                 // arguments
+	// )
+	// failOnError(err, "Failed to declare an exchange")
 
-	for _, exch := range exchanges {
-		nodes := endpointLookup[exch.Name]
-		go services.StartPollingOrderbooks(exch, nodes, delayBetweenReqs[exch.Name], func(n graph.Endpoint) {
-			chains := arbitrage.Run(paths[n.ID()])
-			rows := make([][]string, 0)
-			for _, chain := range chains {
-				if chain.Performance == 0 {
-					continue
+	for {
+		treeOfPossibles.DepthTraversing(func(vertices []*graph.Vertice) {
+			services.FetchVertices(vertices, func(path graph.Path) {
+				chains := arbitrage.Run([]graph.Path{path})
+				rows := make([][]string, 0)
+				for _, chain := range chains {
+					if chain.Performance == 0 {
+						continue
+					}
+					ordersCount := len(chain.Path.Nodes)
+					row := make([]string, ordersCount+5)
+					for j, node := range chain.Path.Nodes {
+						row[j] = node.Description()
+					}
+
+					row[ordersCount] = strconv.FormatFloat(chain.Performance, 'f', 6, 64)
+					row[ordersCount+1] = strconv.FormatFloat(chain.VolumeToEngage, 'f', 6, 64)
+					row[ordersCount+2] = strconv.FormatFloat(chain.VolumeToEngage*chain.Performance, 'f', 6, 64)
+					row[ordersCount+3] = strconv.FormatFloat(chain.VolumeOut, 'f', 6, 64)
+
+					t := time.Now()
+					row[ordersCount+4] = t.Format("2006-01-02 15:04:05")
+					rows = append(rows, row)
+					fmt.Println(strings.Join(row[:], ","))
+
+					// marshal, _ := json.Marshal(chain)
+					// err = ch.Publish(
+					// 	"arbitrage.routing", // exchange
+					// 	"usd.btc",           // routing key
+					// 	false,               // mandatory
+					// 	false,               // immediate
+					// 	amqp.Publishing{
+					// 		ContentType: "text/plain",
+					// 		Body:        []byte(marshal),
+					// 	})
 				}
-				ordersCount := len(chain.Path.Nodes)
-				row := make([]string, ordersCount+5)
-				for j, node := range chain.Path.Nodes {
-					row[j] = node.Description()
+				if len(rows) > 0 {
+					// table.AppendBulk(rows)
+					// table.Render()
 				}
 
-				row[ordersCount] = strconv.FormatFloat(chain.Performance, 'f', 6, 64)
-				row[ordersCount+1] = strconv.FormatFloat(chain.VolumeToEngage, 'f', 6, 64)
-				row[ordersCount+2] = strconv.FormatFloat(chain.VolumeToEngage*chain.Performance, 'f', 6, 64)
-				row[ordersCount+3] = strconv.FormatFloat(chain.VolumeToEngage*chain.Performance-chain.VolumeToEngage, 'f', 6, 64)
-
-				t := time.Now()
-				row[ordersCount+4] = t.Format("2006-01-02 15:04:05")
-				rows = append(rows, row)
-				fmt.Println(strings.Join(row[:], ","))
-
-				marshal, _ := json.Marshal(chain)
-
-				err = ch.Publish(
-					"arbitrage.routing", // exchange
-					"usd.btc",           // routing key
-					false,               // mandatory
-					false,               // immediate
-					amqp.Publishing{
-						ContentType: "text/plain",
-						Body:        []byte(marshal),
-					})
-			}
-			if len(rows) > 0 {
-				// table.AppendBulk(rows)
-				// table.Render()
-			}
+			})
+			time.Sleep(2000 * time.Millisecond)
 		})
 	}
 

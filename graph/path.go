@@ -12,7 +12,7 @@ type Path struct {
 	Name  *string `json:"description"`
 }
 
-func (p *Path) encode() {
+func (p *Path) Encode() {
 	desc := p.Description()
 	p.Name = &desc
 

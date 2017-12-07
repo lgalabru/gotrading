@@ -5,7 +5,7 @@ import (
 	"gotrading/core"
 )
 
-func PathFinder(mashup core.ExchangeMashup, from core.Currency, to core.Currency, depth int) ([]*Endpoint, map[string][]Path, []Path) {
+func PathFinder(mashup core.ExchangeMashup, from core.Currency, to core.Currency, depth int) (Tree, []*Endpoint, map[string][]Path, []Path) {
 	var rawPaths []Path
 	endpointLookup := make(map[string]*Endpoint)
 	nodeLookup := make(map[string]*Node)
@@ -21,30 +21,39 @@ func PathFinder(mashup core.ExchangeMashup, from core.Currency, to core.Currency
 		}
 	}
 
+	// arbitrage := arbitrage.From(endpoint1).To(endpoint2).To(endpoint3).To(endpoint4)
+	// result := arbitrage.Run()
+
+	// Behind the scene, arbitrage, is going to deal with the fetching.
+	// vertices := treeOfPossibles.Roots()
+	// treeNodes := vertice.Children()
+
+	treeOfPossibles := Tree{}
 	endpoints := make([]*Endpoint, 0)
 	paths := make(map[string][]Path)
+
 	for _, path := range rawPaths {
+		treeOfPossibles.InsertPath(path)
+
 		for _, n := range path.Nodes {
+
 			p, ok := paths[n.Endpoint.ID()]
 			if !ok {
 				endpoints = append(endpoints, n.Endpoint)
 				p = make([]Path, 0)
 			}
-			path.encode()
+			path.Encode()
 			paths[n.Endpoint.ID()] = append(p, path)
 		}
 	}
-
 	fmt.Println("Observing", len(rawPaths), "paths")
-
-	return endpoints, paths, rawPaths
+	return treeOfPossibles, endpoints, paths, rawPaths
 }
 
 func findPaths(m core.ExchangeMashup, depth int, p Path, endpointLookup map[string]*Endpoint, nodeLookup map[string]*Node) []Path {
 	var paths []Path
 	firstNode := p.Nodes[0]
 	lastNode := p.Nodes[len(p.Nodes)-1]
-
 	if len(p.Nodes) == depth {
 		from := firstNode.SoldCurrency
 		to := lastNode.BoughtCurrency
