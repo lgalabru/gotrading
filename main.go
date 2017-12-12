@@ -14,9 +14,10 @@ import (
 	"gotrading/services"
 	"gotrading/strategies"
 
+	"gotrading/exchanges/liqui"
+
 	"github.com/streadway/amqp"
 	"github.com/thrasher-/gocryptotrader/config"
-	"github.com/thrasher-/gocryptotrader/exchanges/liqui"
 
 	"flag"
 )
@@ -43,6 +44,7 @@ func main() {
 	}
 
 	interrupt := make(chan os.Signal, 1)
+	dispatchingEnabled := strings.Compare(os.Getenv("AMQP_DISPATCHING_ENABLED"), "1") == 0
 
 	liquiEngine := new(liqui.Liqui)
 	// krakenEngine := new(kraken.Kraken)
@@ -87,25 +89,28 @@ func main() {
 	delayBetweenReqs["Liqui"] = time.Duration(100)
 	delayBetweenReqs["Bittrex"] = time.Duration(100)
 
-	// Rabbit
-	conn, err := amqp.Dial("amqp://developer:xLae4pzT@hc-amqp.dev:5672/hc")
-	failOnError(err, "Failed to connect to RabbitMQ")
-	defer conn.Close()
+	var ch *amqp.Channel
+	if dispatchingEnabled {
+		// Rabbit
+		conn, err := amqp.Dial("amqp://developer:xLae4pzT@hc-amqp.dev:5672/hc")
+		failOnError(err, "Failed to connect to RabbitMQ")
+		defer conn.Close()
 
-	ch, err := conn.Channel()
-	failOnError(err, "Failed to open a channel")
-	defer ch.Close()
+		ch, err := conn.Channel()
+		failOnError(err, "Failed to open a channel")
+		defer ch.Close()
 
-	err = ch.ExchangeDeclare(
-		"arbitrage.routing", // name
-		"topic",             // type
-		true,                // durable
-		false,               // auto-deleted
-		false,               // internal
-		false,               // no-wait
-		nil,                 // arguments
-	)
-	failOnError(err, "Failed to declare an exchange")
+		err = ch.ExchangeDeclare(
+			"arbitrage.routing", // name
+			"topic",             // type
+			true,                // durable
+			false,               // auto-deleted
+			false,               // internal
+			false,               // no-wait
+			nil,                 // arguments
+		)
+		failOnError(err, "Failed to declare an exchange")
+	}
 
 	info, err := liquiEngine.GetAccountInfo()
 	fmt.Println(info, err)
@@ -149,17 +154,18 @@ func main() {
 					rows = append(rows, row)
 					fmt.Println(strings.Join(row[:], ","))
 
-					marshal, _ := json.Marshal(chain)
-					err = ch.Publish(
-						"arbitrage.routing", // exchange
-						"usd.btc",           // routing key
-						false,               // mandatory
-						false,               // immediate
-						amqp.Publishing{
-							ContentType: "text/plain",
-							Body:        []byte(marshal),
-						})
-
+					if dispatchingEnabled {
+						marshal, _ := json.Marshal(chain)
+						err = ch.Publish(
+							"arbitrage.routing", // exchange
+							"usd.btc",           // routing key
+							false,               // mandatory
+							false,               // immediate
+							amqp.Publishing{
+								ContentType: "text/plain",
+								Body:        []byte(marshal),
+							})
+					}
 				}
 				if len(rows) > 0 {
 					// table.AppendBulk(rows)

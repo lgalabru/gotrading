@@ -1,11 +1,12 @@
 package core
 
 import (
+	"gotrading/exchanges/liqui"
+	"gotrading/exchanges/orderbook"
+	"gotrading/exchanges/ticker"
+
 	"github.com/thrasher-/gocryptotrader/config"
 	"github.com/thrasher-/gocryptotrader/currency/pair"
-	"github.com/thrasher-/gocryptotrader/exchanges/liqui"
-	"github.com/thrasher-/gocryptotrader/exchanges/orderbook"
-	"github.com/thrasher-/gocryptotrader/exchanges/ticker"
 )
 
 // Exchange represents an exchange and list the available pairs.
