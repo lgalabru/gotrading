@@ -5,9 +5,9 @@ import (
 	"strconv"
 
 	"github.com/thrasher-/gocryptotrader/currency/pair"
-	"github.com/thrasher-/gocryptotrader/exchanges"
-	"github.com/thrasher-/gocryptotrader/exchanges/orderbook"
-	"github.com/thrasher-/gocryptotrader/exchanges/ticker"
+	"gotrading/exchanges"
+	"gotrading/exchanges/orderbook"
+	"gotrading/exchanges/ticker"
 )
 
 // Start starts the ItBit go routine

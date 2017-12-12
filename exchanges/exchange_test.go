@@ -6,7 +6,7 @@ import (
 	"github.com/thrasher-/gocryptotrader/common"
 	"github.com/thrasher-/gocryptotrader/config"
 	"github.com/thrasher-/gocryptotrader/currency/pair"
-	"github.com/thrasher-/gocryptotrader/exchanges/ticker"
+	"gotrading/exchanges/ticker"
 )
 
 func TestSetAssetTypes(t *testing.T) {

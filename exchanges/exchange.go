@@ -7,9 +7,9 @@ import (
 	"github.com/thrasher-/gocryptotrader/common"
 	"github.com/thrasher-/gocryptotrader/config"
 	"github.com/thrasher-/gocryptotrader/currency/pair"
-	"github.com/thrasher-/gocryptotrader/exchanges/nonce"
-	"github.com/thrasher-/gocryptotrader/exchanges/orderbook"
-	"github.com/thrasher-/gocryptotrader/exchanges/ticker"
+	"gotrading/exchanges/nonce"
+	"gotrading/exchanges/orderbook"
+	"gotrading/exchanges/ticker"
 )
 
 const (

@@ -5,9 +5,9 @@ import (
 
 	"github.com/thrasher-/gocryptotrader/common"
 	"github.com/thrasher-/gocryptotrader/currency/pair"
-	exchange "github.com/thrasher-/gocryptotrader/exchanges"
-	"github.com/thrasher-/gocryptotrader/exchanges/orderbook"
-	"github.com/thrasher-/gocryptotrader/exchanges/ticker"
+	exchange "gotrading/exchanges"
+	"gotrading/exchanges/orderbook"
+	"gotrading/exchanges/ticker"
 )
 
 // Start starts the BTCC go routine

@@ -11,8 +11,8 @@ import (
 
 	"github.com/thrasher-/gocryptotrader/common"
 	"github.com/thrasher-/gocryptotrader/config"
-	"github.com/thrasher-/gocryptotrader/exchanges"
-	"github.com/thrasher-/gocryptotrader/exchanges/ticker"
+	"gotrading/exchanges"
+	"gotrading/exchanges/ticker"
 )
 
 const (

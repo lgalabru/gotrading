@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/thrasher-/gocryptotrader/currency/pair"
-	"github.com/thrasher-/gocryptotrader/exchanges/ticker"
+	"gotrading/exchanges/ticker"
 )
 
 func TestStart(t *testing.T) {
