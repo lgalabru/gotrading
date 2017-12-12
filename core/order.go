@@ -21,6 +21,11 @@ type Order struct {
 	QuoteVolume        float64              `json:"quoteVolume"`
 	TransactionType    OrderTransactionType `json:"transactionType"`
 	Fee                float64              `json:"fee"`
+	TakerFee           float64              `json:"takerFee"`
+	BaseVolumeIn       float64              `json:"baseVolumeIn"`
+	BaseVolumeOut      float64              `json:"baseVolumeOut"`
+	QuoteVolumeIn      float64              `json:"quoteVolumeIn"`
+	QuoteVolumeOut     float64              `json:"quoteVolumeIn"`
 }
 
 // InitAsk initialize an Order, setting the transactionType to Ask
@@ -54,6 +59,7 @@ func (o *Order) Init(pair CurrencyPair, price float64, baseVolume float64) {
 	o.Pair = pair
 	o.Price = price
 	o.PriceOfQuoteToBase = 1 / price
+	o.TakerFee = 0.25 / 100
 	o.UpdateBaseVolume(baseVolume)
 }
 
@@ -61,14 +67,30 @@ func (o *Order) Init(pair CurrencyPair, price float64, baseVolume float64) {
 func (o *Order) UpdateBaseVolume(baseVolume float64) {
 	o.BaseVolume = baseVolume
 	o.QuoteVolume = o.Price * o.BaseVolume
-	o.Fee = 0.25 * o.BaseVolume / 100
+	o.Fee = o.BaseVolume * o.TakerFee
+	o.updateVolumesInOut()
 }
 
 // UpdateQuoteVolume cascade update on BaseVolume and QuoteVolume
 func (o *Order) UpdateQuoteVolume(quoteVolume float64) {
 	o.QuoteVolume = quoteVolume
 	o.BaseVolume = o.QuoteVolume / o.Price
-	o.Fee = 0.25 * o.BaseVolume / 100
+	o.Fee = o.BaseVolume * o.TakerFee
+	o.updateVolumesInOut()
+}
+
+func (o *Order) updateVolumesInOut() {
+	if o.TransactionType == Bid {
+		o.BaseVolumeIn = 0
+		o.QuoteVolumeIn = o.QuoteVolume
+		o.BaseVolumeOut = o.BaseVolume - o.BaseVolume*o.TakerFee
+		o.QuoteVolumeOut = 0
+	} else if o.TransactionType == Ask {
+		o.BaseVolumeIn = o.BaseVolume
+		o.QuoteVolumeIn = 0
+		o.BaseVolumeOut = 0
+		o.QuoteVolumeOut = o.QuoteVolume - o.QuoteVolume*o.TakerFee
+	}
 }
 
 // CreateMatchingAsk returns an Ask order matching the current Bid (crossing ths spread)

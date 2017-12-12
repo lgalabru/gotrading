@@ -3,6 +3,7 @@ package core
 import (
 	"github.com/thrasher-/gocryptotrader/config"
 	"github.com/thrasher-/gocryptotrader/currency/pair"
+	"github.com/thrasher-/gocryptotrader/exchanges/liqui"
 	"github.com/thrasher-/gocryptotrader/exchanges/orderbook"
 	"github.com/thrasher-/gocryptotrader/exchanges/ticker"
 )
@@ -12,6 +13,7 @@ type Exchange struct {
 	Name                     string             `json:"name"`
 	AvailablePairs           []CurrencyPair     `json:"-"`
 	Engine                   *ExchangeInterface `json:"-"`
+	Liqui                    *liqui.Liqui       `json:"-"`
 	IsCurrencyPairNormalized bool               `json:"-"`
 }
 
@@ -29,4 +31,5 @@ type ExchangeInterface interface {
 	GetEnabledCurrencies() []pair.CurrencyPair
 	GetAuthenticatedAPISupport() bool
 	GetAvailableCurrencies() []pair.CurrencyPair
+	Trade(pair, orderType string, amount, price float64) (float64, error)
 }

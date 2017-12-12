@@ -1,47 +1,36 @@
 package strategies
 
 import (
-	"fmt"
 	"math"
 
 	"gotrading/core"
 	"gotrading/graph"
+	"gotrading/services"
 )
 
 type Arbitrage struct {
 	Solutions []Solution
 }
 
-type ArbitrageChain struct {
-	Path            graph.Path   `json:"path"`
-	Orders          []core.Order `json:"orders"`
-	Performance     float64      `json:"performance"`
-	Rates           []float64    `json:"rates"`
-	AdjustedVolumes []float64    `json:"volumes"`
-	VolumeToEngage  float64      `json:"volumeToEngage"`
-	VolumeIn        float64      `json:"volumeIn"`
-	VolumeOut       float64      `json:"volumeOut"`
-	Cost            float64      `json:"cost"`
-}
+func (arbitrage *Arbitrage) Run(paths []graph.Path) []services.ChainedOrders {
 
-func (arbitrage *Arbitrage) Run(paths []graph.Path) []ArbitrageChain {
-
-	chains := make([]ArbitrageChain, len(paths))
+	chains := make([]services.ChainedOrders, len(paths))
 	// fromCurrentToInitial := float64(1)
 	fromInitialToCurrent := float64(1)
 
 	// rateForInitialCurrency := float64(1) // How many INITIAL_CURRENCY are we getting for 1 CURRENT_CURRENCY
 	for j, p := range paths {
 
-		chain := ArbitrageChain{}
+		chain := services.ChainedOrders{}
 		chain.Cost = 0
 		chain.Rates = make([]float64, len(p.Nodes))
 		chain.AdjustedVolumes = make([]float64, len(p.Nodes))
-
+		chain.IsBroken = false
 		chain.Orders = make([]core.Order, len(p.Nodes))
 
 		for i, n := range p.Nodes {
 			if n.Endpoint.Orderbook == nil {
+				chain.IsBroken = true
 				continue
 			}
 
@@ -59,10 +48,10 @@ func (arbitrage *Arbitrage) Run(paths []graph.Path) []ArbitrageChain {
 						priceOfCurrencyToSell = order.Price
 						volumeOfCurrencyToSell = order.BaseVolume
 					} else {
-						fmt.Println("???")
+						chain.IsBroken = true
 					}
 				} else {
-					fmt.Println("Orderbook empty")
+					chain.IsBroken = true
 				}
 			} else {
 				// We are selling the quote <=> we are buying the base -> we match the Ask.
@@ -74,11 +63,10 @@ func (arbitrage *Arbitrage) Run(paths []graph.Path) []ArbitrageChain {
 						priceOfCurrencyToSell = order.PriceOfQuoteToBase
 						volumeOfCurrencyToSell = order.QuoteVolume
 					} else {
-						fmt.Println("???")
-
+						chain.IsBroken = true
 					}
 				} else {
-					fmt.Println("Orderbook empty")
+					chain.IsBroken = true
 				}
 			}
 
@@ -98,7 +86,21 @@ func (arbitrage *Arbitrage) Run(paths []graph.Path) []ArbitrageChain {
 		}
 
 		for i, n := range p.Nodes {
-			chain.AdjustedVolumes[i] = chain.VolumeToEngage * chain.Rates[i]
+			var currentVolumeToEngage float64
+			if i == 0 {
+				currentVolumeToEngage = chain.VolumeToEngage
+			} else {
+				if p.Nodes[i-1].IsBaseToQuote {
+					currentVolumeToEngage = chain.Orders[i-1].QuoteVolumeOut
+				} else if chain.Orders[i-1].TransactionType == core.Bid {
+					currentVolumeToEngage = chain.Orders[i-1].BaseVolumeOut
+				}
+			}
+			if n.IsBaseToQuote {
+				chain.AdjustedVolumes[i] = currentVolumeToEngage * chain.Orders[i].Price
+			} else {
+				chain.AdjustedVolumes[i] = currentVolumeToEngage * chain.Orders[i].PriceOfQuoteToBase
+			}
 			if n.IsBaseToQuote {
 				chain.Orders[i].UpdateQuoteVolume(chain.AdjustedVolumes[i])
 			} else {
@@ -110,18 +112,20 @@ func (arbitrage *Arbitrage) Run(paths []graph.Path) []ArbitrageChain {
 
 		firstOrder := chain.Orders[0]
 		if firstOrder.TransactionType == core.Bid {
-			chain.VolumeIn = firstOrder.QuoteVolume
+			chain.VolumeIn = firstOrder.QuoteVolumeIn
 		} else {
-			chain.VolumeIn = firstOrder.BaseVolume
+			chain.VolumeIn = firstOrder.BaseVolumeIn
 		}
 
 		lastOrder := chain.Orders[len(chain.Orders)-1]
 		if lastOrder.TransactionType == core.Bid {
-			chain.VolumeOut = lastOrder.BaseVolume
+			chain.VolumeOut = lastOrder.BaseVolumeOut
 		} else {
-			chain.VolumeOut = lastOrder.QuoteVolume
+			chain.VolumeOut = lastOrder.QuoteVolumeOut
 		}
-
+		if chain.VolumeIn < 0.0001 || chain.VolumeOut < 0.0001 {
+			chain.IsBroken = true
+		}
 		chain.Performance = chain.VolumeOut / chain.VolumeIn
 		chains[j] = chain
 	}

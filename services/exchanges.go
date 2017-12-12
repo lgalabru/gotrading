@@ -26,7 +26,7 @@ func LoadExchange(cfg *config.Config, name string, exch core.ExchangeInterface) 
 			core.Currency(c.GetFirstCurrency()),
 			core.Currency(c.GetSecondCurrency())}
 	}
-	return core.Exchange{name, pairs, &exch, true}
+	return core.Exchange{name, pairs, &exch, nil, true}
 }
 
 func StartPollingOrderbooks(exch core.Exchange, nodes []graph.EndpointLookup, delayBetweenReqs time.Duration, fn orderbookReceived) {
@@ -78,6 +78,7 @@ func FetchVertices(vertices []*graph.Vertice, fn pathFetched) {
 		n := v.Content
 		cp := pair.NewCurrencyPair(string(n.Endpoint.From), string(n.Endpoint.To))
 		exch := n.Endpoint.Exchange
+		time.Sleep(200 * time.Millisecond)
 		src, err := (*exch.Engine).UpdateOrderbook(cp, "SPOT")
 		if err == nil {
 			dst := &core.Orderbook{}

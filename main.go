@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"os"
@@ -13,9 +14,8 @@ import (
 	"gotrading/services"
 	"gotrading/strategies"
 
+	"github.com/streadway/amqp"
 	"github.com/thrasher-/gocryptotrader/config"
-	"github.com/thrasher-/gocryptotrader/exchanges/bittrex"
-	"github.com/thrasher-/gocryptotrader/exchanges/kraken"
 	"github.com/thrasher-/gocryptotrader/exchanges/liqui"
 
 	"flag"
@@ -45,22 +45,26 @@ func main() {
 	interrupt := make(chan os.Signal, 1)
 
 	liquiEngine := new(liqui.Liqui)
-	krakenEngine := new(kraken.Kraken)
-	bittrexEngine := new(bittrex.Bittrex)
+	// krakenEngine := new(kraken.Kraken)
+	// bittrexEngine := new(bittrex.Bittrex)
 	// gdaxEngine := new(gdax.GDAX)
 	// poloniexEngine := new(poloniex.Poloniex)
 
-	liqui := services.LoadExchange(cfg, "Liqui", liquiEngine)
-	kraken := services.LoadExchange(cfg, "Kraken", krakenEngine)
-	bittrex := services.LoadExchange(cfg, "Bittrex", bittrexEngine)
+	lq := services.LoadExchange(cfg, "Liqui", liquiEngine)
+	lq.Liqui = liquiEngine
+	lq.Liqui.Info, _ = lq.Liqui.GetInfo()
+	// kraken := services.LoadExchange(cfg, "Kraken", krakenEngine)
+	// bittrex := services.LoadExchange(cfg, "Bittrex", bittrexEngine)
 	// poloniex := services.LoadExchange(cfg, "Poloniex", poloniexEngine)
 	// gdax := services.LoadExchange(cfg, "GDAX", gdaxEngine)
-	bittrex.IsCurrencyPairNormalized = false
-	kraken.IsCurrencyPairNormalized = true
+	lq.IsCurrencyPairNormalized = true
+	// bittrex.IsCurrencyPairNormalized = false
+	// kraken.IsCurrencyPairNormalized = true
 
 	// exchanges := []core.Exchange{kraken, liqui, gdax, bittrex}
-	exchanges := []core.Exchange{kraken, liqui}
-	// exchanges := []core.Exchange{liqui}
+	// exchanges := []core.Exchange{kraken, liqui}
+	// exchanges := []core.Exchange{kraken}
+	exchanges := []core.Exchange{lq}
 
 	mashup := core.ExchangeMashup{}
 	mashup.Init(exchanges)
@@ -69,6 +73,10 @@ func main() {
 	to := from
 	depth := 3
 	treeOfPossibles, _, _, _ := graph.PathFinder(mashup, from, to, depth)
+
+	// c := gatling.Client{}
+	// c.Init([]string{"en0"})
+	// c.Fire()
 
 	fmt.Println(treeOfPossibles.Description())
 
@@ -80,24 +88,27 @@ func main() {
 	delayBetweenReqs["Bittrex"] = time.Duration(100)
 
 	// Rabbit
-	// conn, err := amqp.Dial("amqp://developer:xLae4pzT@hc-amqp.dev:5672/hc")
-	// failOnError(err, "Failed to connect to RabbitMQ")
-	// defer conn.Close()
+	conn, err := amqp.Dial("amqp://developer:xLae4pzT@hc-amqp.dev:5672/hc")
+	failOnError(err, "Failed to connect to RabbitMQ")
+	defer conn.Close()
 
-	// ch, err := conn.Channel()
-	// failOnError(err, "Failed to open a channel")
-	// defer ch.Close()
+	ch, err := conn.Channel()
+	failOnError(err, "Failed to open a channel")
+	defer ch.Close()
 
-	// err = ch.ExchangeDeclare(
-	// 	"arbitrage.routing", // name
-	// 	"topic",             // type
-	// 	true,                // durable
-	// 	false,               // auto-deleted
-	// 	false,               // internal
-	// 	false,               // no-wait
-	// 	nil,                 // arguments
-	// )
-	// failOnError(err, "Failed to declare an exchange")
+	err = ch.ExchangeDeclare(
+		"arbitrage.routing", // name
+		"topic",             // type
+		true,                // durable
+		false,               // auto-deleted
+		false,               // internal
+		false,               // no-wait
+		nil,                 // arguments
+	)
+	failOnError(err, "Failed to declare an exchange")
+
+	info, err := liquiEngine.GetAccountInfo()
+	fmt.Println(info, err)
 
 	for {
 		treeOfPossibles.DepthTraversing(func(vertices []*graph.Vertice) {
@@ -105,8 +116,22 @@ func main() {
 				chains := arbitrage.Run([]graph.Path{path})
 				rows := make([][]string, 0)
 				for _, chain := range chains {
-					if chain.Performance == 0 {
+					if chain.Performance == 0.0 || chain.IsBroken == true {
 						continue
+					} else if chain.Performance > 1.0 {
+						_ = chain.Execute()
+						// if ok {
+						// 	marshal, _ := json.Marshal(chain)
+						// 	err = ch.Publish(
+						// 		"arbitrage.routing", // exchange
+						// 		"usd.btc",           // routing key
+						// 		false,               // mandatory
+						// 		false,               // immediate
+						// 		amqp.Publishing{
+						// 			ContentType: "text/plain",
+						// 			Body:        []byte(marshal),
+						// 		})
+						// }
 					}
 					ordersCount := len(chain.Path.Nodes)
 					row := make([]string, ordersCount+5)
@@ -124,16 +149,17 @@ func main() {
 					rows = append(rows, row)
 					fmt.Println(strings.Join(row[:], ","))
 
-					// marshal, _ := json.Marshal(chain)
-					// err = ch.Publish(
-					// 	"arbitrage.routing", // exchange
-					// 	"usd.btc",           // routing key
-					// 	false,               // mandatory
-					// 	false,               // immediate
-					// 	amqp.Publishing{
-					// 		ContentType: "text/plain",
-					// 		Body:        []byte(marshal),
-					// 	})
+					marshal, _ := json.Marshal(chain)
+					err = ch.Publish(
+						"arbitrage.routing", // exchange
+						"usd.btc",           // routing key
+						false,               // mandatory
+						false,               // immediate
+						amqp.Publishing{
+							ContentType: "text/plain",
+							Body:        []byte(marshal),
+						})
+
 				}
 				if len(rows) > 0 {
 					// table.AppendBulk(rows)
@@ -151,6 +177,7 @@ func main() {
 func failOnError(err error, msg string) {
 	if err != nil {
 		log.Fatalf("%s: %s", msg, err)
+		time.Sleep(20 * time.Second)
 		panic(fmt.Sprintf("%s: %s", msg, err))
 	}
 }
