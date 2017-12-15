@@ -18,6 +18,8 @@ import (
 
 	"github.com/streadway/amqp"
 	"github.com/thrasher-/gocryptotrader/config"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 
 	"flag"
 )
@@ -46,6 +48,12 @@ func main() {
 	interrupt := make(chan os.Signal, 1)
 	dispatchingEnabled := strings.Compare(os.Getenv("AMQP_DISPATCHING_ENABLED"), "1") == 0
 
+	config := zap.NewDevelopmentConfig()
+	config.EncoderConfig.EncodeLevel = zapcore.CapitalColorLevelEncoder
+	logger, err := config.Build()
+
+	// f, err := os.Create("/tmp/dat2")
+
 	liquiEngine := new(liqui.Liqui)
 	// krakenEngine := new(kraken.Kraken)
 	// bittrexEngine := new(bittrex.Bittrex)
@@ -54,7 +62,7 @@ func main() {
 
 	lq := services.LoadExchange(cfg, "Liqui", liquiEngine)
 	lq.Liqui = liquiEngine
-	lq.Liqui.Info, _ = lq.Liqui.GetInfo()
+
 	// kraken := services.LoadExchange(cfg, "Kraken", krakenEngine)
 	// bittrex := services.LoadExchange(cfg, "Bittrex", bittrexEngine)
 	// poloniex := services.LoadExchange(cfg, "Poloniex", poloniexEngine)
@@ -80,8 +88,6 @@ func main() {
 	// c.Init([]string{"en0"})
 	// c.Fire()
 
-	fmt.Println(treeOfPossibles.Description())
-
 	arbitrage := strategies.Arbitrage{}
 
 	delayBetweenReqs := make(map[string]time.Duration, len(exchanges))
@@ -90,13 +96,15 @@ func main() {
 	delayBetweenReqs["Bittrex"] = time.Duration(100)
 
 	var ch *amqp.Channel
+	var conn *amqp.Connection
+
 	if dispatchingEnabled {
 		// Rabbit
-		conn, err := amqp.Dial("amqp://developer:xLae4pzT@hc-amqp.dev:5672/hc")
+		conn, err = amqp.Dial("amqp://developer:xLae4pzT@hc-amqp.dev:5672/hc")
 		failOnError(err, "Failed to connect to RabbitMQ")
 		defer conn.Close()
 
-		ch, err := conn.Channel()
+		ch, err = conn.Channel()
 		failOnError(err, "Failed to open a channel")
 		defer ch.Close()
 
@@ -122,21 +130,12 @@ func main() {
 				rows := make([][]string, 0)
 				for _, chain := range chains {
 					if chain.Performance == 0.0 || chain.IsBroken == true {
+						logger.Info(chain.Path.Description(),
+							zap.Bool("isBroken", chain.IsBroken),
+						)
 						continue
 					} else if chain.Performance > 1.0 {
 						_ = chain.Execute()
-						// if ok {
-						// 	marshal, _ := json.Marshal(chain)
-						// 	err = ch.Publish(
-						// 		"arbitrage.routing", // exchange
-						// 		"usd.btc",           // routing key
-						// 		false,               // mandatory
-						// 		false,               // immediate
-						// 		amqp.Publishing{
-						// 			ContentType: "text/plain",
-						// 			Body:        []byte(marshal),
-						// 		})
-						// }
 					}
 					ordersCount := len(chain.Path.Nodes)
 					row := make([]string, ordersCount+5)
@@ -152,7 +151,10 @@ func main() {
 					t := time.Now()
 					row[ordersCount+4] = t.Format("2006-01-02 15:04:05")
 					rows = append(rows, row)
-					fmt.Println(strings.Join(row[:], ","))
+
+					logger.Info(chain.Path.Description(),
+						zap.String("chain", strings.Join(row[:], ",")),
+					)
 
 					if dispatchingEnabled {
 						marshal, _ := json.Marshal(chain)

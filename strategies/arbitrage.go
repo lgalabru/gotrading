@@ -49,9 +49,11 @@ func (arbitrage *Arbitrage) Run(paths []graph.Path) []services.ChainedOrders {
 						volumeOfCurrencyToSell = order.BaseVolume
 					} else {
 						chain.IsBroken = true
+						continue
 					}
 				} else {
 					chain.IsBroken = true
+					continue
 				}
 			} else {
 				// We are selling the quote <=> we are buying the base -> we match the Ask.
@@ -64,9 +66,11 @@ func (arbitrage *Arbitrage) Run(paths []graph.Path) []services.ChainedOrders {
 						volumeOfCurrencyToSell = order.QuoteVolume
 					} else {
 						chain.IsBroken = true
+						continue
 					}
 				} else {
 					chain.IsBroken = true
+					continue
 				}
 			}
 
