@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"gotrading/core"
+	"gotrading/gatling"
 	"gotrading/graph"
 	"gotrading/services"
 	"gotrading/strategies"
@@ -84,10 +85,6 @@ func main() {
 	depth := 3
 	treeOfPossibles, _, _, _ := graph.PathFinder(mashup, from, to, depth)
 
-	// c := gatling.Client{}
-	// c.Init([]string{"en0"})
-	// c.Fire()
-
 	arbitrage := strategies.Arbitrage{}
 
 	delayBetweenReqs := make(map[string]time.Duration, len(exchanges))
@@ -100,7 +97,7 @@ func main() {
 
 	if dispatchingEnabled {
 		// Rabbit
-		conn, err = amqp.Dial("amqp://developer:xLae4pzT@hc-amqp.dev:5672/hc")
+		conn, err = amqp.Dial("amqp://yqkpiqzz:aew9v2ZoAprCB339ZAu_TlVmjRlzJryL@spider.rmq.cloudamqp.com/yqkpiqzz")
 		failOnError(err, "Failed to connect to RabbitMQ")
 		defer conn.Close()
 
@@ -123,9 +120,12 @@ func main() {
 	info, err := liquiEngine.GetAccountInfo()
 	fmt.Println(info, err)
 
+	gatling := gatling.Gatling{}
+	gatling.WarmUp()
+
 	for {
 		treeOfPossibles.DepthTraversing(func(vertices []*graph.Vertice) {
-			services.FetchVertices(vertices, func(path graph.Path) {
+			gatling.FireRequests(vertices, func(path graph.Path) {
 				chains := arbitrage.Run([]graph.Path{path})
 				rows := make([][]string, 0)
 				for _, chain := range chains {
@@ -173,9 +173,7 @@ func main() {
 					// table.AppendBulk(rows)
 					// table.Render()
 				}
-
 			})
-			time.Sleep(2000 * time.Millisecond)
 		})
 	}
 

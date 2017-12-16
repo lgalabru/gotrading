@@ -3,11 +3,12 @@ package liqui
 import (
 	"log"
 
-	"github.com/thrasher-/gocryptotrader/common"
-	"github.com/thrasher-/gocryptotrader/currency/pair"
 	"gotrading/exchanges"
 	"gotrading/exchanges/orderbook"
 	"gotrading/exchanges/ticker"
+
+	"github.com/thrasher-/gocryptotrader/common"
+	"github.com/thrasher-/gocryptotrader/currency/pair"
 )
 
 // Start starts the Liqui go routine
