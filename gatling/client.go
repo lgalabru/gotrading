@@ -121,7 +121,7 @@ func (g *Gatling) fireRequest(vertice *graph.Vertice, i int, c chan indexedNode)
 	response := Response{}
 	curr := fmt.Sprintf("%s", cp.Display("_", false))
 
-	req := fmt.Sprintf("%s/%s/%s/%s", "https://api.Liqui.io/api", "3", "depth", curr)
+	req := fmt.Sprintf("%s/%s/%s/%s?limit=5", "https://api.Liqui.io/api", "3", "depth", curr)
 
 	err := g.SendHTTPGetRequest(client, req, true, false, &response.Data)
 	src := response.Data[curr]

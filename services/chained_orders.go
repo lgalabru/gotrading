@@ -40,15 +40,12 @@ func (c *ChainedOrders) Execute() bool {
 		var orderType string
 		var amount float64
 
-		if c.Path.Nodes[i].IsBaseToQuote {
-			amount = o.BaseVolumeIn
-		} else {
-			amount = o.QuoteVolumeIn
-		}
 		if o.TransactionType == core.Ask {
 			orderType = "sell"
+			amount = o.BaseVolumeIn
 		} else {
 			orderType = "buy"
+			amount = o.QuoteVolumeIn / o.Price
 		}
 		price := o.Price
 		decimals := c.Path.Nodes[i].Endpoint.Exchange.Liqui.Info.Pairs[pair].DecimalPlaces
