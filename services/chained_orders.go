@@ -51,7 +51,7 @@ func (c *ChainedOrders) Execute() bool {
 		decimals := c.Path.Nodes[i].Endpoint.Exchange.Liqui.Info.Pairs[pair].DecimalPlaces
 
 		res, error := engine.Trade(pair, orderType, toFixed(amount, decimals), price)
-		fmt.Println("Executing order:", pair, orderType, toFixed(amount, decimals), price, res, error)
+		fmt.Println("Executing order:", pair, orderType, decimals, toFixed(amount, decimals), price, res, error)
 		if error != nil {
 			c.Results[i] = error.Error()
 			return false

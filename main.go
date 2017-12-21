@@ -97,6 +97,7 @@ func main() {
 
 	if dispatchingEnabled {
 		// Rabbit
+
 		conn, err = amqp.Dial("amqp://yqkpiqzz:aew9v2ZoAprCB339ZAu_TlVmjRlzJryL@spider.rmq.cloudamqp.com/yqkpiqzz")
 		failOnError(err, "Failed to connect to RabbitMQ")
 		defer conn.Close()
@@ -116,9 +117,10 @@ func main() {
 		)
 		failOnError(err, "Failed to declare an exchange")
 	}
-
-	info, err := liquiEngine.GetAccountInfo()
-	fmt.Println(info, err)
+	info, err := liquiEngine.GetInfo()
+	liquiEngine.GetAccountInfo()
+	liquiEngine.Info = info
+	fmt.Println(liquiEngine.Info, info, err)
 
 	gatling := gatling.Gatling{}
 	gatling.WarmUp()

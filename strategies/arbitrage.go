@@ -12,6 +12,15 @@ type Arbitrage struct {
 	Solutions []Solution
 }
 
+func round(num float64) int {
+	return int(num + math.Copysign(0.5, num))
+}
+
+func toFixed(num float64, precision int) float64 {
+	output := math.Pow(10, float64(precision))
+	return float64(round(num*output)) / output
+}
+
 func (arbitrage *Arbitrage) Run(paths []graph.Path) []services.ChainedOrders {
 
 	chains := make([]services.ChainedOrders, len(paths))
@@ -111,6 +120,9 @@ func (arbitrage *Arbitrage) Run(paths []graph.Path) []services.ChainedOrders {
 				chain.Orders[i].UpdateBaseVolume(chain.AdjustedVolumes[i])
 			}
 			chain.Cost = chain.Cost + chain.Orders[i].Fee*chain.Rates[i]
+			// pair := strings.ToLower(string(p.Nodes[i].Endpoint.From)) + "_" + strings.ToLower(string(p.Nodes[i].Endpoint.To))
+			// decimals := p.Nodes[i].Endpoint.Exchange.Liqui.Info.Pairs[pair].DecimalPlaces
+			// fmt.Println(decimals)
 		}
 		chain.Path = p
 
