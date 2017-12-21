@@ -120,6 +120,7 @@ func main() {
 	info, err := liquiEngine.GetInfo()
 	liquiEngine.GetAccountInfo()
 	liquiEngine.Info = info
+
 	fmt.Println(liquiEngine.Info, info, err)
 
 	gatling := gatling.Gatling{}

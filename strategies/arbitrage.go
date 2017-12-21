@@ -120,9 +120,6 @@ func (arbitrage *Arbitrage) Run(paths []graph.Path) []services.ChainedOrders {
 				chain.Orders[i].UpdateBaseVolume(chain.AdjustedVolumes[i])
 			}
 			chain.Cost = chain.Cost + chain.Orders[i].Fee*chain.Rates[i]
-			// pair := strings.ToLower(string(p.Nodes[i].Endpoint.From)) + "_" + strings.ToLower(string(p.Nodes[i].Endpoint.To))
-			// decimals := p.Nodes[i].Endpoint.Exchange.Liqui.Info.Pairs[pair].DecimalPlaces
-			// fmt.Println(decimals)
 		}
 		chain.Path = p
 
