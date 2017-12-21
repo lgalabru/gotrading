@@ -2,6 +2,7 @@ package strategies
 
 import (
 	"math"
+	"time"
 
 	"gotrading/core"
 	"gotrading/graph"
@@ -31,6 +32,7 @@ func (arbitrage *Arbitrage) Run(paths []graph.Path) []services.ChainedOrders {
 	for j, p := range paths {
 
 		chain := services.ChainedOrders{}
+		chain.CreatedAt = time.Now()
 		chain.Cost = 0
 		chain.Rates = make([]float64, len(p.Nodes))
 		chain.AdjustedVolumes = make([]float64, len(p.Nodes))
@@ -140,6 +142,7 @@ func (arbitrage *Arbitrage) Run(paths []graph.Path) []services.ChainedOrders {
 			chain.IsBroken = true
 		}
 		chain.Performance = chain.VolumeOut / chain.VolumeIn
+		chain.DiagnosedAt = time.Now()
 		chains[j] = chain
 	}
 	return chains
