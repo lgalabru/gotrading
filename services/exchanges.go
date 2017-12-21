@@ -41,7 +41,7 @@ func StartPollingOrderbooks(exch core.Exchange, nodes []graph.EndpointLookup, de
 			dst.CurrencyPair = core.CurrencyPair{n.Endpoint.From, n.Endpoint.To}
 			dst.Bids = make([]core.Order, 0)
 			dst.Asks = make([]core.Order, 0)
-			dst.LastUpdate = time.Now()
+			// dst.LastUpdate = time.Now()
 			// fmt.Println("1 ------------------")
 			// fmt.Println(src.Asks)
 			for _, ask := range src.Asks {
@@ -85,7 +85,7 @@ func FetchVertices(vertices []*graph.Vertice, fn pathFetched) {
 			dst.CurrencyPair = core.CurrencyPair{n.Endpoint.From, n.Endpoint.To}
 			dst.Bids = make([]core.Order, 0)
 			dst.Asks = make([]core.Order, 0)
-			dst.LastUpdate = time.Now()
+			// dst.LastUpdate = time.Now()
 			// fmt.Println("1 ------------------")
 			// fmt.Println(src.Asks)
 			for _, ask := range src.Asks {

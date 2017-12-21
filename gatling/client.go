@@ -123,7 +123,9 @@ func (g *Gatling) fireRequest(vertice *graph.Vertice, i int, c chan indexedNode)
 
 	req := fmt.Sprintf("%s/%s/%s/%s?limit=5", "https://api.Liqui.io/api", "3", "depth", curr)
 
+	t1 := time.Now()
 	err := g.SendHTTPGetRequest(client, req, true, false, &response.Data)
+	t2 := time.Now()
 	src := response.Data[curr]
 
 	if err == nil {
@@ -131,7 +133,8 @@ func (g *Gatling) fireRequest(vertice *graph.Vertice, i int, c chan indexedNode)
 		dst.CurrencyPair = core.CurrencyPair{n.Endpoint.From, n.Endpoint.To}
 		dst.Bids = make([]core.Order, 0)
 		dst.Asks = make([]core.Order, 0)
-		dst.LastUpdate = time.Now()
+		dst.StartedLastUpdateAt = t1
+		dst.EndedLastUpdateAt = t2
 
 		for _, ask := range src.Asks {
 			if exch.IsCurrencyPairNormalized == true {
