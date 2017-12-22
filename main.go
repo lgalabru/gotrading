@@ -146,6 +146,8 @@ func main() {
 						row[j] = node.Description()
 					}
 
+					chain.Path.USD = gatling.FetchUSD()
+
 					row[ordersCount] = strconv.FormatFloat(chain.Performance, 'f', 6, 64)
 					row[ordersCount+1] = strconv.FormatFloat(chain.VolumeToEngage, 'f', 6, 64)
 					row[ordersCount+2] = strconv.FormatFloat(chain.VolumeToEngage*chain.Performance, 'f', 6, 64)

@@ -60,7 +60,7 @@ When I fulfill all the orders, running the arbitrage`, func() {
 				nodes[1] = &(graph.Node{&endpoint2, false, &xyz, &def})
 
 				paths = make([]graph.Path, 1)
-				paths[0] = graph.Path{nodes, nil, nil}
+				paths[0] = graph.Path{nodes, nil, nil, 0}
 
 				chains = arbitrage.Run(paths)
 			})

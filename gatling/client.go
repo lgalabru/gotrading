@@ -31,7 +31,7 @@ type Gatling struct {
 func (g *Gatling) WarmUp() {
 
 	g.LastRequestFromClientToHostOccuredAt = make(map[*http.Client]map[string]time.Time)
-	g.DefaultMaxRequestsPerSecondsForHost = 5
+	g.DefaultMaxRequestsPerSecondsForHost = 3
 	g.Mutexes = make(map[*http.Client]sync.RWMutex)
 
 	addrs, _ := net.InterfaceAddrs()
@@ -155,6 +155,29 @@ func (g *Gatling) fireRequest(vertice *graph.Vertice, i int, c chan indexedNode)
 	c <- indexedNode{i, n}
 }
 
+func (g *Gatling) FetchUSD() float64 {
+	cp := pair.NewCurrencyPair("BTC", "USDT")
+
+	client := g.Clients[len(g.Clients)-1]
+
+	type Orderbook struct {
+		Asks [][]float64 `json:"asks"`
+		Bids [][]float64 `json:"bids"`
+	}
+	type Response struct {
+		Data map[string]Orderbook
+	}
+
+	response := Response{}
+	curr := fmt.Sprintf("%s", cp.Display("_", false))
+
+	req := fmt.Sprintf("%s/%s/%s/%s?limit=1", "https://api.Liqui.io/api", "3", "depth", curr)
+
+	g.SendHTTPGetRequest(client, req, true, false, &response.Data)
+	src := response.Data[curr]
+	return src.Asks[0][0]
+}
+
 func (g *Gatling) FireRequests(vertices []*graph.Vertice, fn pathFetched) {
 	path := graph.Path{}
 	path.Nodes = make([]*graph.Node, len(vertices))
@@ -173,7 +196,6 @@ func (g *Gatling) FireRequests(vertices []*graph.Vertice, fn pathFetched) {
 		indexedNode := <-c
 		path.Nodes[indexedNode.Index] = indexedNode.Node
 	}
-
 	path.Encode()
 	fn(path)
 }

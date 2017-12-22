@@ -10,6 +10,7 @@ type Path struct {
 	Nodes []*Node `json:"nodes"`
 	Id    *string `json:"id"`
 	Name  *string `json:"description"`
+	USD   float64
 }
 
 func (p *Path) Encode() {
