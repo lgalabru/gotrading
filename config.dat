@@ -305,8 +305,8 @@
    "AuthenticatedAPISupport": true,
    "APIKey": "NX8DU5D5-MYDPL6Y4-T921VIUO-CVU0ZW33-H728HY8F",
    "APISecret": "e1cd6cff97051bb118382c25a7e83ea39eb052f37d450273349adb11e1146f0e",
-   "AvailablePairs": "ETH_BTC,PAY_ETH,PAY_BTC",
-   "EnabledPairs": "ETH_BTC,PAY_ETH,PAY_BTC",
+   "AvailablePairs": "ETH_BTC,TRX_ETH,TRX_BTC",
+   "EnabledPairs": "ETH_BTC,TRX_ETH,TRX_BTC",
    "BaseCurrencies": "USD",
    "AssetTypes": "SPOT",
    "ConfigCurrencyPairFormat": {

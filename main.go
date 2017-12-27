@@ -136,9 +136,9 @@ func main() {
 						logger.Info(chain.Path.Description(),
 							zap.Bool("isBroken", chain.IsBroken),
 						)
-						continue
+						// continue
 					} else if chain.Performance > 1.0 {
-						_ = chain.Execute()
+						// _ = chain.Execute()
 					}
 					ordersCount := len(chain.Path.Nodes)
 					row := make([]string, ordersCount+5)
