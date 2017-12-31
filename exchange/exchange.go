@@ -4,12 +4,13 @@ import (
 	"log"
 	"time"
 
+	"gotrading/exchange/nonce"
+	"gotrading/exchange/orderbook"
+	"gotrading/exchange/ticker"
+
 	"github.com/thrasher-/gocryptotrader/common"
 	"github.com/thrasher-/gocryptotrader/config"
 	"github.com/thrasher-/gocryptotrader/currency/pair"
-	"gotrading/exchanges/nonce"
-	"gotrading/exchanges/orderbook"
-	"gotrading/exchanges/ticker"
 )
 
 const (

@@ -1,0 +1,33 @@
+{
+  "exchanges": {
+    "Liqui": {
+      "api_key": "NX8DU5D5-MYDPL6Y4-T921VIUO-CVU0ZW33-H728HY8F",
+      "api_secret": "e1cd6cff97051bb118382c25a7e83ea39eb052f37d450273349adb11e1146f0e",
+      "verbose": false,
+      "max_requests_per_sec": 4,
+      "pairs_enabled": "ETH_BTC,TRX_ETH,TRX_BTC"
+    },
+    "Binance": {
+      "api_key": "lF3Mp2Vo2D7Xf3Rl5oT7VAiLMrzrJbgatoaRVLdx5FSaShEbQKpx7g52CEaCQpLv",
+      "api_secret": "BIa7PhhcCJvAIskPWBUXFaDHC6EpHVxjfoEGDcnrLV9P7k4JnKflTW9Z2YbskDnR",
+      "verbose": false,
+      "max_requests_per_sec": 2,
+      "pairs_enabled": "ETH_BTC,TRX_ETH,TRX_BTC"
+    }
+  },
+  "strategies": {
+    "arbitrage": {
+      "hits_per_sec": 4,
+      "from_currency": "BTC",
+      "to_currency": "BTC",
+      "transitions_count": 3,
+      "exchanges_enabled": "Binance,Liqui",
+      "exchange_crossing_enabled": false
+    }
+  },
+  "amqp": {
+    "url": "amqp://yqkpiqzz:aew9v2ZoAprCB339ZAu_TlVmjRlzJryL@spider.rmq.cloudamqp.com/yqkpiqzz",
+    "exchange_name": "arbitrage.routing",
+    "routing_key": "usd.btc"
+  }
+}

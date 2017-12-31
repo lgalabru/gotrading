@@ -1,4 +1,4 @@
-package liqui
+package binance
 
 import (
 	"fmt"
@@ -6,23 +6,23 @@ import (
 	"net/http"
 )
 
-type Liqui struct {
+type Binance struct {
 }
 
-func (b Liqui) GetOrderbook() func(client http.Client, pair core.CurrencyPair) (core.Orderbook, error) {
+func (b Binance) GetOrderbook() func(client http.Client, pair core.CurrencyPair) (core.Orderbook, error) {
 	return func(client http.Client, pair core.CurrencyPair) (core.Orderbook, error) {
 		var ob core.Orderbook
 		var err error
-		fmt.Println("Getting Orderbooks from Liqui")
+		fmt.Println("Getting Orderbooks from Binance")
 		return ob, err
 	}
 }
 
-func (b Liqui) GetPortfolio() func(client http.Client) (core.Portfolio, error) {
+func (b Binance) GetPortfolio() func(client http.Client) (core.Portfolio, error) {
 	return func(client http.Client) (core.Portfolio, error) {
 		var p core.Portfolio
 		var err error
-		fmt.Println("Getting Portfolio from Liqui")
+		fmt.Println("Getting Portfolio from Binance")
 		return p, err
 	}
 }

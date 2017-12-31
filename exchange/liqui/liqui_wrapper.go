@@ -3,9 +3,9 @@ package liqui
 import (
 	"log"
 
-	"gotrading/exchanges"
-	"gotrading/exchanges/orderbook"
-	"gotrading/exchanges/ticker"
+	"gotrading/exchange"
+	"gotrading/exchange/orderbook"
+	"gotrading/exchange/ticker"
 
 	"github.com/thrasher-/gocryptotrader/common"
 	"github.com/thrasher-/gocryptotrader/currency/pair"

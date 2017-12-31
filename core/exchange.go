@@ -1,9 +1,10 @@
 package core
 
 import (
-	"gotrading/exchanges/liqui"
-	"gotrading/exchanges/orderbook"
-	"gotrading/exchanges/ticker"
+	"gotrading/exchange/liqui"
+	"gotrading/exchange/orderbook"
+	"gotrading/exchange/ticker"
+	"net/http"
 
 	"github.com/thrasher-/gocryptotrader/config"
 	"github.com/thrasher-/gocryptotrader/currency/pair"
@@ -33,4 +34,24 @@ type ExchangeInterface interface {
 	GetAuthenticatedAPISupport() bool
 	GetAvailableCurrencies() []pair.CurrencyPair
 	Trade(pair, orderType string, amount, price float64) (float64, error)
+}
+
+type ExchangeBase struct {
+	Name                     string         `json:"name"`
+	PairsEnabled             []CurrencyPair `json:"-"`
+	IsCurrencyPairNormalized bool           `json:"-"`
+
+	FuncGetOrderbook func(client http.Client, pair CurrencyPair) (Orderbook, error)
+	FuncGetPortfolio func(client http.Client) (Portfolio, error)
+	// fnPostOrder    func(client http.Client, order core.Order) (core.Order, error)
+	// fnDeposit      func(client http.Client) (bool, error)
+	// fnWithdraw     func(client http.Client) (bool, error)
+}
+
+func (b *ExchangeBase) GetOrderbook(client http.Client, pair CurrencyPair) (Orderbook, error) {
+	return b.FuncGetOrderbook(client, pair)
+}
+
+func (b *ExchangeBase) GetPortfolio(client http.Client) (Portfolio, error) {
+	return b.FuncGetPortfolio(client)
 }
