@@ -4,13 +4,15 @@ import (
 	"crypto/sha1"
 	"encoding/hex"
 	"fmt"
+
+	"gotrading/core"
 )
 
 type Path struct {
-	Nodes []*Node `json:"nodes"`
-	Id    *string `json:"id"`
-	Name  *string `json:"description"`
-	USD   float64
+	Hits []*core.Hit `json:"hits"`
+	Id   *string     `json:"id"`
+	Name *string     `json:"description"`
+	USD  float64
 }
 
 func (p *Path) Encode() {
@@ -23,17 +25,17 @@ func (p *Path) Encode() {
 	p.Id = &enc
 }
 
-func (p Path) contains(n Node) bool {
+func (p Path) contains(h core.Hit) bool {
 	found := false
-	for _, m := range p.Nodes {
-		found = n.isEqual(*m)
+	for _, m := range p.Hits {
+		found = h.IsEqual(*m)
 	}
 	return found
 }
 
 func (p Path) Description() string {
 	str := ""
-	for _, n := range p.Nodes {
+	for _, n := range p.Hits {
 		str += n.Description() + " -> "
 	}
 	return str

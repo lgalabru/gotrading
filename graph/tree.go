@@ -1,6 +1,9 @@
 package graph
 
-import "strconv"
+import (
+	"gotrading/core"
+	"strconv"
+)
 
 type Tree struct {
 	Roots []*Vertice
@@ -8,17 +11,17 @@ type Tree struct {
 }
 
 type Vertice struct {
-	Content  *Node
+	Hit      *core.Hit
 	Children []*Vertice
 	Ancestor *Vertice
 	IsRoot   bool
 }
 
-type depthTraversing func(vertices []*Vertice)
+type depthTraversing func(hits []*core.Hit)
 
 func (t *Tree) InsertPath(p Path) {
 	var v *Vertice
-	for i, n := range p.Nodes {
+	for i, n := range p.Hits {
 		if i == 0 {
 			v = t.FindOrCreateRoot(n)
 		} else {
@@ -28,22 +31,22 @@ func (t *Tree) InsertPath(p Path) {
 	}
 }
 
-func (t *Tree) FindOrCreateRoot(n *Node) *Vertice {
+func (t *Tree) FindOrCreateRoot(h *core.Hit) *Vertice {
 	for _, r := range t.Roots {
-		if n.isEqual(*r.Content) {
+		if h.IsEqual(*r.Hit) {
 			return r
 		}
 	}
-	r := createVertice(n)
+	r := createVertice(h)
 	r.IsRoot = true
 	r.Ancestor = nil
 	t.Roots = append(t.Roots, r)
 	return r
 }
 
-func createVertice(n *Node) *Vertice {
+func createVertice(h *core.Hit) *Vertice {
 	childs := make([]*Vertice, 0)
-	v := Vertice{n, childs, nil, false}
+	v := Vertice{h, childs, nil, false}
 	return &v
 }
 
@@ -51,7 +54,7 @@ func (v *Vertice) RightSibling() *Vertice {
 	if v.IsRoot == false {
 		siblings := v.Ancestor.Children
 		for i, s := range siblings {
-			if v.Content.isEqual(*s.Content) {
+			if v.Hit.IsEqual(*s.Hit) {
 				if i+1 < len(siblings) {
 					return siblings[i+1]
 				}
@@ -65,7 +68,7 @@ func (v *Vertice) LeftSibling() *Vertice {
 	if v.IsRoot == false {
 		siblings := v.Ancestor.Children
 		for i, s := range siblings {
-			if v.Content.isEqual(*s.Content) {
+			if v.Hit.IsEqual(*s.Hit) {
 				if i+1 < len(siblings) {
 					return siblings[i+1]
 				}
@@ -75,13 +78,13 @@ func (v *Vertice) LeftSibling() *Vertice {
 	return nil
 }
 
-func (v *Vertice) FindOrCreateChild(n *Node) *Vertice {
+func (v *Vertice) FindOrCreateChild(h *core.Hit) *Vertice {
 	for _, c := range v.Children {
-		if n.isEqual(*c.Content) {
+		if h.IsEqual(*c.Hit) {
 			return c
 		}
 	}
-	c := createVertice(n)
+	c := createVertice(h)
 	c.IsRoot = false
 	c.Ancestor = v
 	v.Children = append(v.Children, c)
@@ -91,10 +94,11 @@ func (v *Vertice) FindOrCreateChild(n *Node) *Vertice {
 func (t Tree) DepthTraversing(fn depthTraversing) {
 	for _, r := range t.Roots {
 		ancestors := []*Vertice{r}
+		hits := []*core.Hit{r.Hit}
 		if r.IsLeaf() {
-			fn(ancestors)
+			fn(hits)
 		} else {
-			r.depthTraversing(ancestors, fn)
+			r.depthTraversing(ancestors, hits, fn)
 		}
 	}
 }
@@ -103,13 +107,14 @@ func (v Vertice) IsLeaf() bool {
 	return len(v.Children) == 0
 }
 
-func (v Vertice) depthTraversing(ancestors []*Vertice, fn depthTraversing) {
+func (v Vertice) depthTraversing(ancestors []*Vertice, hits []*core.Hit, fn depthTraversing) {
 	for _, c := range v.Children {
 		vertices := append(ancestors, c)
+		contents := append(hits, c.Hit)
 		if c.IsLeaf() {
-			fn(vertices)
+			fn(contents)
 		} else {
-			c.depthTraversing(vertices, fn)
+			c.depthTraversing(vertices, contents, fn)
 		}
 	}
 }

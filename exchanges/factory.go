@@ -2,7 +2,6 @@ package exchanges
 
 import (
 	"fmt"
-	"net/http"
 	"strings"
 
 	"gotrading/core"
@@ -17,34 +16,34 @@ type Factory struct {
 
 // standardizedExchange enforces standard functions for all supported exchanges
 type standardizedExchange interface {
-	GetOrderbook() func(client http.Client, pair core.CurrencyPair) (core.Orderbook, error)
-	GetPortfolio() func(client http.Client) (core.Portfolio, error)
-	// PostOrder(client http.Client, order core.Order) (core.Order, error)
+	GetOrderbook() func(hit core.Hit) (core.Orderbook, error)
+	GetPortfolio() func() (core.Portfolio, error)
+	PostOrder() func(order core.Order) (core.Order, error)
 	// Deposit(client http.Client) (bool, error)
 	// Withdraw(client http.Client) (bool, error)
 }
 
-func (f *Factory) BuildExchange(name string) core.ExchangeBase {
+func (f *Factory) BuildExchange(name string) core.Exchange {
 	key := strings.Join([]string{"exchanges", name}, ".")
 	config := viper.GetStringMapString(key)
 	fmt.Println("Building", name, config)
 
-	exchange := core.ExchangeBase{}
+	exchange := core.Exchange{}
+	exchange.LoadAvailablePairs(config["available_pairs"])
 	switch name {
 	case "Binance":
 		injectStandardizedMethods(&exchange, binance.Binance{})
 	case "Liqui":
 		injectStandardizedMethods(&exchange, liqui.Liqui{})
-
 	default:
 	}
 	return exchange
 }
 
-func injectStandardizedMethods(b *core.ExchangeBase, exch standardizedExchange) {
+func injectStandardizedMethods(b *core.Exchange, exch standardizedExchange) {
 	b.FuncGetOrderbook = exch.GetOrderbook()
 	b.FuncGetPortfolio = exch.GetPortfolio()
-	// b.fnPostOrder = exch.PostOrder
+	b.FuncPostOrder = exch.PostOrder()
 	// b.fnDeposit = exch.Deposit
 	// b.fnWithdraw = exch.Withdraw
 }

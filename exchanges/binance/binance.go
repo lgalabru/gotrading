@@ -3,14 +3,13 @@ package binance
 import (
 	"fmt"
 	"gotrading/core"
-	"net/http"
 )
 
 type Binance struct {
 }
 
-func (b Binance) GetOrderbook() func(client http.Client, pair core.CurrencyPair) (core.Orderbook, error) {
-	return func(client http.Client, pair core.CurrencyPair) (core.Orderbook, error) {
+func (b Binance) GetOrderbook() func(hit core.Hit) (core.Orderbook, error) {
+	return func(hit core.Hit) (core.Orderbook, error) {
 		var ob core.Orderbook
 		var err error
 		fmt.Println("Getting Orderbooks from Binance")
@@ -18,8 +17,8 @@ func (b Binance) GetOrderbook() func(client http.Client, pair core.CurrencyPair)
 	}
 }
 
-func (b Binance) GetPortfolio() func(client http.Client) (core.Portfolio, error) {
-	return func(client http.Client) (core.Portfolio, error) {
+func (b Binance) GetPortfolio() func() (core.Portfolio, error) {
+	return func() (core.Portfolio, error) {
 		var p core.Portfolio
 		var err error
 		fmt.Println("Getting Portfolio from Binance")
@@ -27,11 +26,14 @@ func (b Binance) GetPortfolio() func(client http.Client) (core.Portfolio, error)
 	}
 }
 
-// func (b *Binance) PostOrder(client http.Client, order core.Order) (core.Order, error) {
-// 	var o core.Order
-// 	var err error
-// 	return o, err
-// }
+func (b Binance) PostOrder() func(order core.Order) (core.Order, error) {
+	return func(order core.Order) (core.Order, error) {
+		var o core.Order
+		var err error
+		fmt.Println("Posting Order on Binance")
+		return o, err
+	}
+}
 
 // func (b *Binance) Deposit(client http.Client) (bool, error) {
 // 	var err error

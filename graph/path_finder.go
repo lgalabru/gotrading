@@ -5,17 +5,17 @@ import (
 	"gotrading/core"
 )
 
-func PathFinder(mashup core.ExchangeMashup, from core.Currency, to core.Currency, depth int) (Tree, []*Endpoint, map[string][]Path, []Path) {
+func PathFinder(mashup core.ExchangeMashup, from core.Currency, to core.Currency, depth int) (Tree, []*core.Endpoint, map[string][]Path, []Path) {
 	var rawPaths []Path
-	endpointLookup := make(map[string]*Endpoint)
-	nodeLookup := make(map[string]*Node)
+	endpointLookup := make(map[string]*core.Endpoint)
+	nodeLookup := make(map[string]*core.Hit)
 
 	for _, to := range mashup.Currencies {
 		if to != from {
 			for _, exch := range mashup.Exchanges {
 				n, endpointLookup, nodeLookup := nodeFromMashup(from, to, exch, mashup, endpointLookup, nodeLookup)
 				if n != nil {
-					rawPaths = append(findPaths(mashup, depth, Path{[]*Node{n}, nil, nil, 0}, endpointLookup, nodeLookup), rawPaths...)
+					rawPaths = append(findPaths(mashup, depth, Path{[]*core.Hit{n}, nil, nil, 0}, endpointLookup, nodeLookup), rawPaths...)
 				}
 			}
 		}
@@ -29,13 +29,13 @@ func PathFinder(mashup core.ExchangeMashup, from core.Currency, to core.Currency
 	// treeNodes := vertice.Children()
 
 	treeOfPossibles := Tree{}
-	endpoints := make([]*Endpoint, 0)
+	endpoints := make([]*core.Endpoint, 0)
 	paths := make(map[string][]Path)
 
 	for _, path := range rawPaths {
 		treeOfPossibles.InsertPath(path)
 
-		for _, n := range path.Nodes {
+		for _, n := range path.Hits {
 
 			p, ok := paths[n.Endpoint.ID()]
 			if !ok {
@@ -50,17 +50,17 @@ func PathFinder(mashup core.ExchangeMashup, from core.Currency, to core.Currency
 	return treeOfPossibles, endpoints, paths, rawPaths
 }
 
-func findPaths(m core.ExchangeMashup, depth int, p Path, endpointLookup map[string]*Endpoint, nodeLookup map[string]*Node) []Path {
+func findPaths(m core.ExchangeMashup, depth int, p Path, endpointLookup map[string]*core.Endpoint, nodeLookup map[string]*core.Hit) []Path {
 	var paths []Path
-	firstNode := p.Nodes[0]
-	lastNode := p.Nodes[len(p.Nodes)-1]
-	if len(p.Nodes) == depth {
+	firstNode := p.Hits[0]
+	lastNode := p.Hits[len(p.Hits)-1]
+	if len(p.Hits) == depth {
 		from := firstNode.SoldCurrency
 		to := lastNode.BoughtCurrency
 		if from == to {
 			paths = []Path{p}
 		}
-	} else if len(p.Nodes) < depth {
+	} else if len(p.Hits) < depth {
 		from := lastNode.BoughtCurrency
 		for _, to := range m.Currencies {
 			if to != from {
@@ -70,14 +70,14 @@ func findPaths(m core.ExchangeMashup, depth int, p Path, endpointLookup map[stri
 						firstFrom := firstNode.SoldCurrency
 						nextTo := n.BoughtCurrency
 						if (nextTo == firstFrom) && p.contains(*n) == false {
-							pathToEvaluate := Path{append(p.Nodes, n), nil, nil, 0}
+							pathToEvaluate := Path{append(p.Hits, n), nil, nil, 0}
 							candidates := findPaths(m, depth, pathToEvaluate, endpointLookup, nodeLookup)
 							if len(candidates) > 0 {
 								paths = append(paths, candidates...)
 							}
-						} else if len(p.Nodes) < depth-1 {
+						} else if len(p.Hits) < depth-1 {
 							if p.contains(*n) == false {
-								pathToEvaluate := Path{append(p.Nodes, n), nil, nil, 0}
+								pathToEvaluate := Path{append(p.Hits, n), nil, nil, 0}
 								candidates := findPaths(m, depth, pathToEvaluate, endpointLookup, nodeLookup)
 								if len(candidates) > 0 {
 									paths = append(paths, candidates...)
@@ -92,20 +92,20 @@ func findPaths(m core.ExchangeMashup, depth int, p Path, endpointLookup map[stri
 	return paths
 }
 
-func nodeFromMashup(from core.Currency, to core.Currency, exchange core.Exchange, mashup core.ExchangeMashup, endpointLookup map[string]*Endpoint, nodeLookup map[string]*Node) (*Node, map[string]*Endpoint, map[string]*Node) {
-	var n *Node
+func nodeFromMashup(from core.Currency, to core.Currency, exchange core.Exchange, mashup core.ExchangeMashup, endpointLookup map[string]*core.Endpoint, nodeLookup map[string]*core.Hit) (*core.Hit, map[string]*core.Endpoint, map[string]*core.Hit) {
+	var n *core.Hit
 	ok := mashup.LinkExist(from, to, exchange)
 	if ok {
 		var base, quote core.Currency
 		base = from
 		quote = to
-		proto := Endpoint{base, quote, exchange, nil}
+		proto := core.Endpoint{base, quote, exchange, nil}
 		endpoint, ok := endpointLookup[proto.ID()]
 		if !ok {
 			endpointLookup[proto.ID()] = &proto
 			endpoint = &proto
 		}
-		cproto := Node{endpoint, true, from, to}
+		cproto := core.Hit{endpoint, true, from, to}
 		node, ok := nodeLookup[cproto.ID()]
 		if !ok {
 			nodeLookup[cproto.ID()] = &cproto
@@ -118,13 +118,13 @@ func nodeFromMashup(from core.Currency, to core.Currency, exchange core.Exchange
 			var base, quote core.Currency
 			base = to
 			quote = from
-			proto := Endpoint{base, quote, exchange, nil}
+			proto := core.Endpoint{base, quote, exchange, nil}
 			endpoint, ok := endpointLookup[proto.ID()]
 			if !ok {
 				endpointLookup[proto.ID()] = &proto
 				endpoint = &proto
 			}
-			cproto := Node{endpoint, false, from, to}
+			cproto := core.Hit{endpoint, false, from, to}
 			node, ok := nodeLookup[cproto.ID()]
 			if !ok {
 				nodeLookup[cproto.ID()] = &cproto

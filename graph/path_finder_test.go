@@ -24,7 +24,7 @@ When looking for the available paths within Exhange1, starting and ending with A
 				mashup    core.ExchangeMashup
 				from      core.Currency
 				to        core.Currency
-				nodes     []*Node
+				hits      []*Hit
 				lookups   map[string][]Path
 				paths     []Path
 			)
@@ -46,7 +46,7 @@ When looking for the available paths within Exhange1, starting and ending with A
 				from = abc
 				to = from
 				depth := 3
-				nodes, lookups, paths = PathFinder(mashup, from, to, depth)
+				hits, lookups, paths = PathFinder(mashup, from, to, depth)
 			})
 
 			It("should return 2 paths", func() {
@@ -67,7 +67,7 @@ When looking for the available paths within Exhange1, starting and ending with B
 				mashup    core.ExchangeMashup
 				from      core.Currency
 				to        core.Currency
-				nodes     []*Node
+				hits      []*Hit
 				lookups   map[string][]Path
 				paths     []Path
 			)
@@ -89,7 +89,7 @@ When looking for the available paths within Exhange1, starting and ending with B
 				from = btc
 				to = from
 				depth := 3
-				nodes, lookups, paths = PathFinder(mashup, from, to, depth)
+				hits, lookups, paths = PathFinder(mashup, from, to, depth)
 			})
 
 			It("should return 2 paths", func() {
