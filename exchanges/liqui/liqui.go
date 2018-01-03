@@ -15,9 +15,7 @@ type Liqui struct {
 func (b Liqui) GetOrderbook() func(hit core.Hit) (core.Orderbook, error) {
 	return func(hit core.Hit) (core.Orderbook, error) {
 
-		fmt.Println("FETCHING ORDERBOOK", hit)
 		endpoint := hit.Endpoint
-		exch := endpoint.Exchange
 
 		type Orderbook struct {
 			Asks [][]float64 `json:"asks"`
@@ -30,7 +28,7 @@ func (b Liqui) GetOrderbook() func(hit core.Hit) (core.Orderbook, error) {
 		response := Response{}
 		curr := strings.ToLower(fmt.Sprintf("%s_%s", endpoint.From, endpoint.To))
 
-		req := fmt.Sprintf("%s/%s/%s/%s?limit=5", "https://api.Liqui.io/api", "3", "depth", curr)
+		req := fmt.Sprintf("%s/%s/%s/%s?limit=3", "https://api.Liqui.io/api", "3", "depth", curr)
 
 		t1 := time.Now()
 
@@ -49,16 +47,10 @@ func (b Liqui) GetOrderbook() func(hit core.Hit) (core.Orderbook, error) {
 			dst.EndedLastUpdateAt = t2
 
 			for _, ask := range src.Asks {
-				if exch.IsCurrencyPairNormalized == true {
-					dst.Asks = append(dst.Asks, core.NewAsk(dst.CurrencyPair, ask[0], ask[1]))
-				} else {
-				}
+				dst.Asks = append(dst.Asks, core.NewAsk(dst.CurrencyPair, ask[0], ask[1]))
 			}
 			for _, bid := range src.Bids {
-				if exch.IsCurrencyPairNormalized == true {
-					dst.Bids = append(dst.Bids, core.NewBid(dst.CurrencyPair, bid[0], bid[1]))
-				} else {
-				}
+				dst.Bids = append(dst.Bids, core.NewBid(dst.CurrencyPair, bid[0], bid[1]))
 			}
 		} else {
 			fmt.Println("Error", endpoint.Description(), err)

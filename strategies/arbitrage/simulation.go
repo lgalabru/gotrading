@@ -10,38 +10,39 @@ import (
 )
 
 type Simulation struct {
-	StartedAt    time.Time `json:"startedAt"`
-	EndedAt      time.Time `json:"endedAt"`
-	hits         []*core.Hit
-	chain        ChainedOrders
-	IsSuccessful bool
+	StartedAt time.Time `json:"startedAt"`
+	EndedAt   time.Time `json:"endedAt"`
+	hits      []*core.Hit
+	Report    Report
 }
 
 func (sim *Simulation) Init(hits []*core.Hit) {
 	sim.hits = hits
+	sim.Report = Report{}
 }
 
 func (sim *Simulation) Run() {
+	r := &sim.Report
+	r.SimulationStartedAt = time.Now()
 
 	batch := networking.Batch{}
 	batch.UpdateOrderbooks(sim.hits, func(path graph.Path) {
 
-		sim.chain = ChainedOrders{}
 		fromInitialToCurrent := float64(1)
 
 		// rateForInitialCurrency := float64(1) // How many INITIAL_CURRENCY are we getting for 1 CURRENT_CURRENCY
 
-		sim.chain.CreatedAt = time.Now()
-		sim.chain.Cost = 0
-		sim.chain.Rates = make([]float64, len(path.Hits))
-		sim.chain.AdjustedVolumes = make([]float64, len(path.Hits))
-		sim.chain.IsBroken = false
-		sim.chain.Orders = make([]core.Order, len(path.Hits))
+		r.Cost = 0
+		r.Rates = make([]float64, len(path.Hits))
+		r.AdjustedVolumes = make([]float64, len(path.Hits))
+		r.IsSimulationSuccessful = true
+		r.Orders = make([]core.Order, len(path.Hits))
 
 		for i, n := range path.Hits {
 			if n.Endpoint.Orderbook == nil {
-				sim.chain.IsBroken = true
-				continue
+				r.IsSimulationSuccessful = false
+				r.SimulationEndedAt = time.Now()
+				return
 			}
 
 			var priceOfCurrencyToSell float64
@@ -58,12 +59,14 @@ func (sim *Simulation) Run() {
 						priceOfCurrencyToSell = order.Price
 						volumeOfCurrencyToSell = order.BaseVolume
 					} else {
-						sim.chain.IsBroken = true
-						continue
+						r.IsSimulationSuccessful = false
+						r.SimulationEndedAt = time.Now()
+						return
 					}
 				} else {
-					sim.chain.IsBroken = true
-					continue
+					r.IsSimulationSuccessful = false
+					r.SimulationEndedAt = time.Now()
+					return
 				}
 			} else {
 				// We are selling the quote <=> we are buying the base -> we match the Ask.
@@ -75,77 +78,81 @@ func (sim *Simulation) Run() {
 						priceOfCurrencyToSell = order.PriceOfQuoteToBase
 						volumeOfCurrencyToSell = order.QuoteVolume
 					} else {
-						sim.chain.IsBroken = true
-						continue
+						r.IsSimulationSuccessful = false
+						r.SimulationEndedAt = time.Now()
+						return
 					}
 				} else {
-					sim.chain.IsBroken = true
-					continue
+					r.IsSimulationSuccessful = false
+					r.SimulationEndedAt = time.Now()
+					return
 				}
 			}
 
 			fromInitialToCurrent = fromInitialToCurrent * priceOfCurrencyToSell
-			sim.chain.Rates[i] = fromInitialToCurrent
-			sim.chain.Performance = fromInitialToCurrent
+			r.Rates[i] = fromInitialToCurrent
+			r.Performance = fromInitialToCurrent
 
 			if i == 0 {
-				sim.chain.VolumeToEngage = volumeOfCurrencyToSell
+				r.VolumeToEngage = volumeOfCurrencyToSell
 			} else {
-				limitingAmount := sim.chain.VolumeToEngage * fromInitialToCurrent
+				limitingAmount := r.VolumeToEngage * fromInitialToCurrent
 				currentAmount := volumeOfCurrencyToSell * priceOfCurrencyToSell
 				newLimitingAmount := math.Min(limitingAmount, currentAmount)
-				sim.chain.VolumeToEngage = newLimitingAmount / fromInitialToCurrent
+				r.VolumeToEngage = newLimitingAmount / fromInitialToCurrent
 			}
-			sim.chain.Orders[i] = order
+			r.Orders[i] = order
 		}
 
 		for i, n := range path.Hits {
 			var currentVolumeToEngage float64
 			if i == 0 {
-				currentVolumeToEngage = sim.chain.VolumeToEngage
+				currentVolumeToEngage = r.VolumeToEngage
 			} else {
 				if path.Hits[i-1].IsBaseToQuote {
-					currentVolumeToEngage = sim.chain.Orders[i-1].QuoteVolumeOut
-				} else if sim.chain.Orders[i-1].TransactionType == core.Bid {
-					currentVolumeToEngage = sim.chain.Orders[i-1].BaseVolumeOut
+					currentVolumeToEngage = r.Orders[i-1].QuoteVolumeOut
+				} else if r.Orders[i-1].TransactionType == core.Bid {
+					currentVolumeToEngage = r.Orders[i-1].BaseVolumeOut
 				}
 			}
 			if n.IsBaseToQuote {
-				sim.chain.AdjustedVolumes[i] = currentVolumeToEngage * sim.chain.Orders[i].Price
+				r.AdjustedVolumes[i] = currentVolumeToEngage * r.Orders[i].Price
 			} else {
-				sim.chain.AdjustedVolumes[i] = currentVolumeToEngage * sim.chain.Orders[i].PriceOfQuoteToBase
+				r.AdjustedVolumes[i] = currentVolumeToEngage * r.Orders[i].PriceOfQuoteToBase
 			}
 			if n.IsBaseToQuote {
-				sim.chain.Orders[i].UpdateQuoteVolume(sim.chain.AdjustedVolumes[i])
+				r.Orders[i].UpdateQuoteVolume(r.AdjustedVolumes[i])
 			} else {
-				sim.chain.Orders[i].UpdateBaseVolume(sim.chain.AdjustedVolumes[i])
+				r.Orders[i].UpdateBaseVolume(r.AdjustedVolumes[i])
 			}
-			sim.chain.Cost = sim.chain.Cost + sim.chain.Orders[i].Fee*sim.chain.Rates[i]
+			r.Cost = r.Cost + r.Orders[i].Fee*r.Rates[i]
 		}
-		sim.chain.Path = path
+		r.Path = path
 
-		firstOrder := sim.chain.Orders[0]
+		firstOrder := r.Orders[0]
 		if firstOrder.TransactionType == core.Bid {
-			sim.chain.VolumeIn = firstOrder.QuoteVolumeIn
+			r.VolumeIn = firstOrder.QuoteVolumeIn
 		} else {
-			sim.chain.VolumeIn = firstOrder.BaseVolumeIn
+			r.VolumeIn = firstOrder.BaseVolumeIn
 		}
 
-		lastOrder := sim.chain.Orders[len(sim.chain.Orders)-1]
+		lastOrder := r.Orders[len(r.Orders)-1]
 		if lastOrder.TransactionType == core.Bid {
-			sim.chain.VolumeOut = lastOrder.BaseVolumeOut
+			r.VolumeOut = lastOrder.BaseVolumeOut
 		} else {
-			sim.chain.VolumeOut = lastOrder.QuoteVolumeOut
+			r.VolumeOut = lastOrder.QuoteVolumeOut
 		}
-		if sim.chain.VolumeIn < 0.0001 || sim.chain.VolumeOut < 0.0001 {
-			sim.chain.IsBroken = true
+		if r.VolumeIn < 0.0001 || r.VolumeOut < 0.0001 {
+			r.IsSimulationSuccessful = false
+			r.SimulationEndedAt = time.Now()
+			return
 		}
-		sim.chain.Performance = sim.chain.VolumeOut / sim.chain.VolumeIn
-		sim.chain.DiagnosedAt = time.Now()
-
+		r.Performance = r.VolumeOut / r.VolumeIn
+		r.SimulationEndedAt = time.Now()
+		r.IsSimulationSuccessful = r.Performance > 1.0
 	})
 }
 
-func (sim *Simulation) BuildReport() Report {
-	return Report{}
+func (sim *Simulation) IsSuccessful() bool {
+	return sim.Report.IsSimulationSuccessful
 }

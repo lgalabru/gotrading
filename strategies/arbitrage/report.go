@@ -1,13 +1,35 @@
 package arbitrage
 
 import (
-  "time"
+	"encoding/json"
+	"time"
+
+	"gotrading/core"
+	"gotrading/graph"
 )
 
 type Report struct {
-  StartedAt time.Time    `json:"startedAt"`
-	EndedAt   time.Time    `json:"endedAt"`
+	Path                     graph.Path   `json:"path"`
+	Orders                   []core.Order `json:"orders"`
+	Performance              float64      `json:"performance"`
+	Rates                    []float64    `json:"rates"`
+	AdjustedVolumes          []float64    `json:"volumes"`
+	VolumeToEngage           float64      `json:"volumeToEngage"`
+	VolumeIn                 float64      `json:"volumeIn"`
+	VolumeOut                float64      `json:"volumeOut"`
+	Cost                     float64      `json:"cost"`
+	Results                  []string     `json:"results"`
+	SimulationStartedAt      time.Time    `json:"simulationStartedAt"`
+	SimulationEndedAt        time.Time    `json:"simulationEndedAt"`
+	IsSimulationSuccessful   bool         `json:"isSimulationSuccessful"`
+	ExecutionStartedAt       time.Time    `json:"executionStartedAt"`
+	ExecutionEndedAt         time.Time    `json:"executionEndedAt"`
+	IsExecutionSuccessful    bool         `json:"isExecutionSuccessful"`
+	VerificationStartedAt    time.Time    `json:"verificationStartedAt"`
+	VerificationEndedAt      time.Time    `json:"verificationEndedAt"`
+	IsVerificationSuccessful bool         `json:"isVerificationSuccessful"`
 }
 
-func (r Report) Encoded() {
+func (r Report) Encode() ([]byte, error) {
+	return json.Marshal(r)
 }

@@ -10,9 +10,9 @@ type Exchange struct {
 	PairsEnabled             []CurrencyPair `json:"-"`
 	IsCurrencyPairNormalized bool           `json:"-"`
 
-	FuncGetOrderbook func(hit Hit) (Orderbook, error)
-	FuncGetPortfolio func() (Portfolio, error)
-	FuncPostOrder    func(order Order) (Order, error)
+	FuncGetOrderbook func(hit Hit) (Orderbook, error) `json:"-"`
+	FuncGetPortfolio func() (Portfolio, error)        `json:"-"`
+	FuncPostOrder    func(order Order) (Order, error) `json:"-"`
 	// fnDeposit      func(client http.Client) (bool, error)
 	// fnWithdraw     func(client http.Client) (bool, error)
 }

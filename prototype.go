@@ -46,7 +46,8 @@ func main() {
 	treeOfPossibles, _, _, _ := graph.PathFinder(mashup, from, to, depth)
 
 	publisher := reporting.Publisher{}
-	publisher.Init(arbitrageSettings["reporting"])
+	publisher.Init(viper.GetStringMapString("strategies.arbitrage.reporting.publisher"))
+	defer publisher.Close()
 
 	for {
 		treeOfPossibles.DepthTraversing(func(hits []*core.Hit) {
@@ -54,16 +55,17 @@ func main() {
 			sim := arbitrage.Simulation{}
 			sim.Init(hits)
 			sim.Run()
-			if sim.IsSuccessful == false {
-				go publisher.Send(sim.BuildReport())
+			fmt.Println(sim.IsSuccessful())
+			if sim.IsSuccessful() == false {
+				go publisher.Send(sim.Report)
 				return
 			}
 
 			exec := arbitrage.Execution{}
 			exec.Init(sim)
 			exec.Run()
-			if exec.IsSuccessful == false {
-				go publisher.Send(exec.BuildReport())
+			if exec.IsSuccessful() == false {
+				go publisher.Send(exec.Report)
 				// Recovery? Rollback?
 				return
 			}
@@ -71,8 +73,8 @@ func main() {
 			verif := arbitrage.Verification{}
 			verif.Init(exec)
 			verif.Run()
-			if verif.IsSuccessful {
-				go publisher.Send(verif.BuildReport())
+			if verif.IsSuccessful() {
+				go publisher.Send(verif.Report)
 				// Log, return
 			}
 		})

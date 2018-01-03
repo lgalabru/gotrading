@@ -1,5 +1,5 @@
 package reporting
 
 type Report interface {
-	Encoded()
+	Encode() ([]byte, error)
 }

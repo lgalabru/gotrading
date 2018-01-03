@@ -1,6 +1,7 @@
 package networking
 
 import (
+	"fmt"
 	"gotrading/core"
 	"gotrading/graph"
 )
@@ -40,7 +41,7 @@ func (b *Batch) UpdateOrderbooks(hits []*core.Hit, fn pathFetched) {
 func (b *Batch) GetOrderbook(hit *core.Hit, i int, c chan indexedHit) {
 	exchange := hit.Endpoint.Exchange
 
-	exchange.GetOrderbook(*hit)
-
+	o, _ := exchange.GetOrderbook(*hit)
+	hit.Endpoint.Orderbook = &o
 	c <- indexedHit{i, hit}
 }
