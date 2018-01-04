@@ -1,17 +1,13 @@
 package arbitrage
 
 import (
-	"fmt"
+	"gotrading/networking"
 	"math"
-	"strings"
 	"time"
-
-	"gotrading/core"
 )
 
 type Execution struct {
-	Report     Report
-	simulation Simulation
+	Report Report
 }
 
 func round(num float64) int {
@@ -32,35 +28,24 @@ func (exec *Execution) Run() {
 	r.IsExecutionSuccessful = true
 	r.Results = make([]string, len(r.Orders))
 	r.ExecutionStartedAt = time.Now()
-	for i, o := range r.Orders {
-		exchange := r.Path.Hits[i].Endpoint.Exchange
-		pair := strings.ToLower(string(r.Path.Hits[i].Endpoint.From)) + "_" + strings.ToLower(string(r.Path.Hits[i].Endpoint.To))
-		var orderType string
-		var amount float64
 
-		if o.TransactionType == core.Ask {
-			orderType = "sell"
-			amount = o.BaseVolumeIn
-		} else {
-			orderType = "buy"
-			amount = o.QuoteVolumeIn / o.Price
-		}
-		price := o.Price
-		// decimals := exec.chain.Path.Hits[i].Endpoint.Exchange.Liqui.Info.Pairs[pair].DecimalPlaces
-		decimals := 8
-		res, error := exchange.PostOrder(o)
+	batch := networking.Batch{}
+	batch.PostOrders(r.Orders)
 
-		// res, error := exchange.Trade(pair, orderType, toFixed(amount, decimals), price)
-		fmt.Println("Executing order:", pair, orderType, decimals, toFixed(amount, decimals), price, res, error)
-		if error != nil {
-			r.Results[i] = error.Error()
-			r.ExecutionEndedAt = time.Now()
-			r.IsExecutionSuccessful = false
-			return
-		} else {
-			r.Results[i] = "hit" // Taker? Maker?
-		}
-	}
+	// for i, o := range r.Orders {
+	// 	exchange := o.Hit.Endpoint.Exchange
+	// 	exchange.PostOrder(o)
+
+	// 	if error != nil {
+	// 		r.Results[i] = error.Error()
+	// 		r.ExecutionEndedAt = time.Now()
+	// 		r.IsExecutionSuccessful = false
+	// 		return
+	// 	} else {
+	// 		r.Results[i] = "hit" // Taker? Maker?
+	// 	}
+	// }
+
 	r.ExecutionEndedAt = time.Now()
 }
 

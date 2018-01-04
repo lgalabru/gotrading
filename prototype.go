@@ -57,7 +57,9 @@ func main() {
 			sim.Run()
 			fmt.Println(sim.IsSuccessful())
 			if sim.IsSuccessful() == false {
-				go publisher.Send(sim.Report)
+				if sim.IsIncomplete() == false {
+					go publisher.Send(sim.Report)
+				}
 				return
 			}
 

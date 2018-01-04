@@ -40,17 +40,18 @@ func (b Liqui) GetOrderbook() func(hit core.Hit) (core.Orderbook, error) {
 		dst := &core.Orderbook{}
 
 		if err == nil {
-			dst.CurrencyPair = core.CurrencyPair{endpoint.From, endpoint.To}
 			dst.Bids = make([]core.Order, 0)
 			dst.Asks = make([]core.Order, 0)
 			dst.StartedLastUpdateAt = t1
 			dst.EndedLastUpdateAt = t2
 
 			for _, ask := range src.Asks {
-				dst.Asks = append(dst.Asks, core.NewAsk(dst.CurrencyPair, ask[0], ask[1]))
+				a := core.NewAsk(ask[0], ask[1])
+				dst.Asks = append(dst.Asks, a)
 			}
 			for _, bid := range src.Bids {
-				dst.Bids = append(dst.Bids, core.NewBid(dst.CurrencyPair, bid[0], bid[1]))
+				b := core.NewBid(bid[0], bid[1])
+				dst.Bids = append(dst.Bids, b)
 			}
 		} else {
 			fmt.Println("Error", endpoint.Description(), err)
@@ -73,6 +74,27 @@ func (b Liqui) PostOrder() func(order core.Order) (core.Order, error) {
 		var o core.Order
 		var err error
 		fmt.Println("Posting Order on Liqui")
+
+		exchange := r.Path.Hits[i].Endpoint.Exchange
+		pair := strings.ToLower(string(r.Path.Hits[i].Endpoint.From)) + "_" + strings.ToLower(string(r.Path.Hits[i].Endpoint.To))
+		var orderType string
+		var amount float64
+
+		if o.TransactionType == core.Ask {
+			orderType = "sell"
+			amount = o.BaseVolumeIn
+		} else {
+			orderType = "buy"
+			amount = o.QuoteVolumeIn / o.Price
+		}
+		price := o.Price
+		// decimals := exec.chain.Path.Hits[i].Endpoint.Exchange.Liqui.Info.Pairs[pair].DecimalPlaces
+		decimals := 8
+		res, error := exchange.PostOrder(o)
+
+		// res, error := exchange.Trade(pair, orderType, toFixed(amount, decimals), price)
+		fmt.Println("Executing order:", pair, orderType, decimals, toFixed(amount, decimals), price, res, error)
+
 		return o, err
 	}
 }

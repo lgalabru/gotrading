@@ -24,7 +24,7 @@ func (sim *Simulation) Init(hits []*core.Hit) {
 func (sim *Simulation) Run() {
 	r := &sim.Report
 	r.SimulationStartedAt = time.Now()
-
+	r.IsSimulationIncomplete = false
 	batch := networking.Batch{}
 	batch.UpdateOrderbooks(sim.hits, func(path graph.Path) {
 
@@ -42,6 +42,7 @@ func (sim *Simulation) Run() {
 			if n.Endpoint.Orderbook == nil {
 				r.IsSimulationSuccessful = false
 				r.SimulationEndedAt = time.Now()
+				r.IsSimulationIncomplete = true
 				return
 			}
 
@@ -61,11 +62,13 @@ func (sim *Simulation) Run() {
 					} else {
 						r.IsSimulationSuccessful = false
 						r.SimulationEndedAt = time.Now()
+						r.IsSimulationIncomplete = true
 						return
 					}
 				} else {
 					r.IsSimulationSuccessful = false
 					r.SimulationEndedAt = time.Now()
+					r.IsSimulationIncomplete = true
 					return
 				}
 			} else {
@@ -80,11 +83,13 @@ func (sim *Simulation) Run() {
 					} else {
 						r.IsSimulationSuccessful = false
 						r.SimulationEndedAt = time.Now()
+						r.IsSimulationIncomplete = true
 						return
 					}
 				} else {
 					r.IsSimulationSuccessful = false
 					r.SimulationEndedAt = time.Now()
+					r.IsSimulationIncomplete = true
 					return
 				}
 			}
@@ -101,6 +106,7 @@ func (sim *Simulation) Run() {
 				newLimitingAmount := math.Min(limitingAmount, currentAmount)
 				r.VolumeToEngage = newLimitingAmount / fromInitialToCurrent
 			}
+			order.Hit = n
 			r.Orders[i] = order
 		}
 
@@ -155,4 +161,8 @@ func (sim *Simulation) Run() {
 
 func (sim *Simulation) IsSuccessful() bool {
 	return sim.Report.IsSimulationSuccessful
+}
+
+func (sim *Simulation) IsIncomplete() bool {
+	return sim.Report.IsSimulationIncomplete
 }

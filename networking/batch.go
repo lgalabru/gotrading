@@ -11,9 +11,14 @@ type Batch struct {
 
 type pathFetched func(path graph.Path)
 
-type indexedHit struct {
+type sortedHit struct {
 	Index int
 	Hit   *core.Hit
+}
+
+type sortedOrder struct {
+	Index int
+	Order *core.Order
 }
 
 func (b *Batch) UpdateOrderbooks(hits []*core.Hit, fn pathFetched) {
@@ -21,7 +26,7 @@ func (b *Batch) UpdateOrderbooks(hits []*core.Hit, fn pathFetched) {
 
 	path := graph.Path{}
 	path.Hits = hits
-	c := make(chan indexedHit, len(hits))
+	c := make(chan sortedHit, len(hits))
 
 	for i, n := range hits {
 		if len(g.Clients) > 1 {
@@ -31,17 +36,47 @@ func (b *Batch) UpdateOrderbooks(hits []*core.Hit, fn pathFetched) {
 		}
 	}
 	for range hits {
-		indexedHit := <-c
-		path.Hits[indexedHit.Index] = indexedHit.Hit
+		sortedHit := <-c
+		path.Hits[sortedHit.Index] = sortedHit.Hit
 	}
 	path.Encode()
 	fn(path)
 }
 
-func (b *Batch) GetOrderbook(hit *core.Hit, i int, c chan indexedHit) {
+func (b *Batch) GetOrderbook(hit *core.Hit, i int, c chan sortedHit) {
 	exchange := hit.Endpoint.Exchange
 
 	o, _ := exchange.GetOrderbook(*hit)
 	hit.Endpoint.Orderbook = &o
-	c <- indexedHit{i, hit}
+	c <- sortedHit{i, hit}
+}
+
+func (b *Batch) PostOrders(orders []core.Order) {
+	g := SharedGatling()
+
+	c := make(chan sortedOrder, len(orders))
+
+	for i, o := range orders {
+		if len(g.Clients) > 1 {
+			go b.PostOrder(o, i, c)
+		} else {
+			b.PostOrder(o, i, c)
+		}
+	}
+	for range orders {
+		sortedOrder := <-c
+		fmt.Println(sortedOrder)
+		// path.Hits[sortedOrder.Index] = sortedOrder.Order
+	}
+	// fn(path)
+}
+
+func (b *Batch) PostOrder(order core.Order, i int, c chan sortedOrder) {
+	exchange := order.Hit.Endpoint.Exchange
+
+	o, err := exchange.PostOrder(order)
+	fmt.Println(o)
+	fmt.Println(err)
+	// hit.Endpoint.Orderbook = &o
+	// c <- indexedHit{i, hit}
 }

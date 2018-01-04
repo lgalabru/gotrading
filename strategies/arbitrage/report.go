@@ -9,7 +9,7 @@ import (
 )
 
 type Report struct {
-	Path                     graph.Path   `json:"path"`
+	Path                     graph.Path   `json:"-"`
 	Orders                   []core.Order `json:"orders"`
 	Performance              float64      `json:"performance"`
 	Rates                    []float64    `json:"rates"`
@@ -21,6 +21,7 @@ type Report struct {
 	Results                  []string     `json:"results"`
 	SimulationStartedAt      time.Time    `json:"simulationStartedAt"`
 	SimulationEndedAt        time.Time    `json:"simulationEndedAt"`
+	IsSimulationIncomplete   bool         `json:"isSimulationIncomplete"`
 	IsSimulationSuccessful   bool         `json:"isSimulationSuccessful"`
 	ExecutionStartedAt       time.Time    `json:"executionStartedAt"`
 	ExecutionEndedAt         time.Time    `json:"executionEndedAt"`

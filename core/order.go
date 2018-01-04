@@ -14,7 +14,7 @@ const (
 
 // Order represents an order
 type Order struct {
-	Pair               CurrencyPair         `json:"pair"`
+	Hit                *Hit                 `json:"hit,omitempty"`
 	Price              float64              `json:"price"`
 	PriceOfQuoteToBase float64              `json:"quoteToBasePrice"`
 	BaseVolume         float64              `json:"baseVolume"`
@@ -29,34 +29,33 @@ type Order struct {
 }
 
 // InitAsk initialize an Order, setting the transactionType to Ask
-func (o *Order) InitAsk(pair CurrencyPair, price float64, baseVolume float64) {
+func (o *Order) InitAsk(price float64, baseVolume float64) {
 	o.TransactionType = Ask
-	o.Init(pair, price, baseVolume)
+	o.Init(price, baseVolume)
 }
 
 // InitBid initialize an Order, setting the transactionType to Bid
-func (o *Order) InitBid(pair CurrencyPair, price float64, baseVolume float64) {
+func (o *Order) InitBid(price float64, baseVolume float64) {
 	o.TransactionType = Bid
-	o.Init(pair, price, baseVolume)
+	o.Init(price, baseVolume)
 }
 
 // NewAsk initialize an Order, setting the transactionType to Ask
-func NewAsk(pair CurrencyPair, price float64, baseVolume float64) Order {
+func NewAsk(price float64, baseVolume float64) Order {
 	o := Order{}
-	o.InitAsk(pair, price, baseVolume)
+	o.InitAsk(price, baseVolume)
 	return o
 }
 
 // NewBid returns an Order, setting the transactionType to Bid
-func NewBid(pair CurrencyPair, price float64, baseVolume float64) Order {
+func NewBid(price float64, baseVolume float64) Order {
 	o := Order{}
-	o.InitBid(pair, price, baseVolume)
+	o.InitBid(price, baseVolume)
 	return o
 }
 
 // Init initialize an Order
-func (o *Order) Init(pair CurrencyPair, price float64, baseVolume float64) {
-	o.Pair = pair
+func (o *Order) Init(price float64, baseVolume float64) {
 	o.Price = price
 	o.PriceOfQuoteToBase = 1 / price
 	o.TakerFee = 0.25 / 100
