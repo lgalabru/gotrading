@@ -17,7 +17,7 @@ func (m *ExchangeMashup) Init(exchanges []Exchange) {
 	m.ExchangesLookup = make(map[string]int, len(exchanges))
 
 	for i, exch := range exchanges {
-		for _, pair := range exch.AvailablePairs {
+		for _, pair := range exch.PairsEnabled {
 
 			_, ok := m.CurrenciesLookup[pair.Base]
 			if !ok {
@@ -46,7 +46,7 @@ func (m *ExchangeMashup) Init(exchanges []Exchange) {
 	}
 
 	for _, exch := range exchanges {
-		for _, pair := range exch.AvailablePairs {
+		for _, pair := range exch.PairsEnabled {
 			m.Links[m.CurrenciesLookup[pair.Base]][m.CurrenciesLookup[pair.Quote]][m.ExchangesLookup[exch.Name]] = true
 		}
 	}

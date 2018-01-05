@@ -5,14 +5,14 @@
       "api_secret": "e1cd6cff97051bb118382c25a7e83ea39eb052f37d450273349adb11e1146f0e",
       "verbose": false,
       "max_requests_per_sec": 4,
-      "available_pairs": "ETH_BTC,TRX_ETH,TRX_BTC"
+      "pairs_enabled": "ETH_BTC,TRX_ETH,TRX_BTC"
     },
     "Binance": {
       "api_key": "lF3Mp2Vo2D7Xf3Rl5oT7VAiLMrzrJbgatoaRVLdx5FSaShEbQKpx7g52CEaCQpLv",
       "api_secret": "BIa7PhhcCJvAIskPWBUXFaDHC6EpHVxjfoEGDcnrLV9P7k4JnKflTW9Z2YbskDnR",
       "verbose": false,
       "max_requests_per_sec": 2,
-      "available_pairs": "ETH_BTC,TRX_ETH,TRX_BTC"
+      "pairs_enabled": "ETH_BTC,TRX_ETH,TRX_BTC"
     }
   },
   "strategies": {

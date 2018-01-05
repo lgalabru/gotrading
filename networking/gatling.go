@@ -2,15 +2,12 @@ package networking
 
 import (
 	"context"
-	"encoding/json"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
 	"net/url"
-	"reflect"
 	"strings"
 	"sync"
 	"time"
@@ -105,13 +102,16 @@ func (g *Gatling) warmUp() {
 	}
 }
 
-func (g *Gatling) GET(exchURL string, result interface{}) error {
+func (g *Gatling) GET(exchURL string) ([]byte, error) {
 
 	if g.IsVerbose {
 		log.Println("Gatling> Preparing interface", exchURL)
 	}
 
 	client := g.Clients[0]
+
+	var contents []byte
+	var err error
 
 	mutex := g.Mutexes[client]
 	URL, err := url.Parse(exchURL)
@@ -142,29 +142,19 @@ func (g *Gatling) GET(exchURL string, result interface{}) error {
 
 	res, err := client.Get(exchURL)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	if res.StatusCode != 200 {
-		return fmt.Errorf("common.SendHTTPGetRequest() error: HTTP status code %d", res.StatusCode)
+		return nil, fmt.Errorf("common.SendHTTPGetRequest() error: HTTP status code %d", res.StatusCode)
 	}
 
-	contents, err := ioutil.ReadAll(res.Body)
+	contents, err = ioutil.ReadAll(res.Body)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	defer res.Body.Close()
 
-	if !strings.Contains(reflect.ValueOf(result).Type().String(), "*") {
-		return errors.New("json decode error - memory address not supplied")
-	}
-
-	err = json.Unmarshal(contents, result)
-	if err != nil {
-		log.Println(string(contents[:]))
-		return err
-	}
-
-	return nil
+	return contents, err
 }

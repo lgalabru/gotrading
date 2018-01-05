@@ -32,13 +32,12 @@ func main() {
 
 	for _, name := range exchangesEnabled {
 		exch := factory.BuildExchange(name)
+		exch.LoadSettings()
 		exchanges = append(exchanges, exch)
 	}
 
 	mashup := core.ExchangeMashup{}
 	mashup.Init(exchanges)
-
-	fmt.Println(exchanges)
 
 	from := core.Currency(arbitrageSettings["from_currency"])
 	to := core.Currency(arbitrageSettings["to_currency"])

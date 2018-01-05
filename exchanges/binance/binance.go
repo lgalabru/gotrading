@@ -8,6 +8,16 @@ import (
 type Binance struct {
 }
 
+func (b Binance) GetSettings() func() (core.ExchangeSettings, error) {
+	return func() (core.ExchangeSettings, error) {
+		var settings core.ExchangeSettings
+		var err error
+		fmt.Println("Loading settings from Binance")
+		return settings, err
+
+	}
+}
+
 func (b Binance) GetOrderbook() func(hit core.Hit) (core.Orderbook, error) {
 	return func(hit core.Hit) (core.Orderbook, error) {
 		var ob core.Orderbook
