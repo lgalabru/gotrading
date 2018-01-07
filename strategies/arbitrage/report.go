@@ -19,6 +19,7 @@ type Report struct {
 	VolumeOut                float64      `json:"volumeOut"`
 	Cost                     float64      `json:"cost"`
 	Results                  []string     `json:"results"`
+	IsTradedVolumeEnough     bool         `json:"isTradedVolumeEnough"`
 	SimulationStartedAt      time.Time    `json:"simulationStartedAt"`
 	SimulationEndedAt        time.Time    `json:"simulationEndedAt"`
 	IsSimulationIncomplete   bool         `json:"isSimulationIncomplete"`

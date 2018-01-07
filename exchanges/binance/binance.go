@@ -36,8 +36,8 @@ func (b Binance) GetPortfolio() func() (core.Portfolio, error) {
 	}
 }
 
-func (b Binance) PostOrder() func(order core.Order) (core.Order, error) {
-	return func(order core.Order) (core.Order, error) {
+func (b Binance) PostOrder() func(order core.Order, settings core.ExchangeSettings) (core.Order, error) {
+	return func(order core.Order, settings core.ExchangeSettings) (core.Order, error) {
 		var o core.Order
 		var err error
 		fmt.Println("Posting Order on Binance")

@@ -7,7 +7,6 @@ import (
 	"log"
 	"net"
 	"net/http"
-	"net/url"
 	"strings"
 	"sync"
 	"time"
@@ -102,10 +101,10 @@ func (g *Gatling) warmUp() {
 	}
 }
 
-func (g *Gatling) GET(exchURL string) ([]byte, error) {
+func (g *Gatling) Send(request *http.Request) ([]byte, error) {
 
 	if g.IsVerbose {
-		log.Println("Gatling> Preparing interface", exchURL)
+		log.Println("Gatling> Preparing interface", request.URL)
 	}
 
 	client := g.Clients[0]
@@ -114,7 +113,7 @@ func (g *Gatling) GET(exchURL string) ([]byte, error) {
 	var err error
 
 	mutex := g.Mutexes[client]
-	URL, err := url.Parse(exchURL)
+	URL := request.URL
 	hostname := URL.Hostname()
 	maxRequestsPerSeconds := g.MaxRequestsPerSecondsForHost[hostname]
 	if maxRequestsPerSeconds == 0 {
@@ -140,7 +139,7 @@ func (g *Gatling) GET(exchURL string) ([]byte, error) {
 	}
 	mutex.Unlock()
 
-	res, err := client.Get(exchURL)
+	res, err := client.Do(request)
 	if err != nil {
 		return nil, err
 	}
@@ -157,4 +156,9 @@ func (g *Gatling) GET(exchURL string) ([]byte, error) {
 	defer res.Body.Close()
 
 	return contents, err
+}
+
+func (g *Gatling) GET(url string) ([]byte, error) {
+	req, _ := http.NewRequest("GET", url, nil)
+	return g.Send(req)
 }

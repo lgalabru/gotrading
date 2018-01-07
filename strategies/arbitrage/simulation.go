@@ -1,6 +1,7 @@
 package arbitrage
 
 import (
+	"fmt"
 	"math"
 	"time"
 
@@ -148,11 +149,15 @@ func (sim *Simulation) Run() {
 		} else {
 			r.VolumeOut = lastOrder.QuoteVolumeOut
 		}
+
 		if r.VolumeIn < 0.0001 || r.VolumeOut < 0.0001 {
+			fmt.Println("Traded volume under threshold")
+			r.IsTradedVolumeEnough = false
 			r.IsSimulationSuccessful = false
 			r.SimulationEndedAt = time.Now()
 			return
 		}
+		r.IsTradedVolumeEnough = true
 		r.Performance = r.VolumeOut / r.VolumeIn
 		r.SimulationEndedAt = time.Now()
 		r.IsSimulationSuccessful = r.Performance > 1.0
@@ -163,6 +168,6 @@ func (sim *Simulation) IsSuccessful() bool {
 	return sim.Report.IsSimulationSuccessful
 }
 
-func (sim *Simulation) IsIncomplete() bool {
-	return sim.Report.IsSimulationIncomplete
+func (sim *Simulation) IsExecutable() bool {
+	return sim.Report.IsSimulationIncomplete == false && sim.Report.IsTradedVolumeEnough
 }

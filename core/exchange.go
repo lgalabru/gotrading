@@ -2,6 +2,7 @@ package core
 
 import (
 	"strings"
+	"time"
 )
 
 type Exchange struct {
@@ -9,46 +10,52 @@ type Exchange struct {
 	PairsEnabled     []CurrencyPair   `json:"-"`
 	ExchangeSettings ExchangeSettings `json:"-"`
 
-	FuncGetSettings  func() (ExchangeSettings, error) `json:"-"`
-	FuncGetOrderbook func(hit Hit) (Orderbook, error) `json:"-"`
-	FuncGetPortfolio func() (Portfolio, error)        `json:"-"`
-	FuncPostOrder    func(order Order) (Order, error) `json:"-"`
+	FuncGetSettings  func() (ExchangeSettings, error)                            `json:"-"`
+	FuncGetOrderbook func(hit Hit) (Orderbook, error)                            `json:"-"`
+	FuncGetPortfolio func() (Portfolio, error)                                   `json:"-"`
+	FuncPostOrder    func(order Order, settings ExchangeSettings) (Order, error) `json:"-"`
 	// fnDeposit      func(client http.Client) (bool, error)
 	// fnWithdraw     func(client http.Client) (bool, error)
 }
 
 type ExchangeSettings struct {
+	APIKey                   string                                `json:"-"`
+	APISecret                string                                `json:"-"`
 	AvailablePairs           []CurrencyPair                        `json:"-"`
 	PairsSettings            map[CurrencyPair]CurrencyPairSettings `json:"-"`
 	IsCurrencyPairNormalized bool                                  `json:"-"`
+	Nonce                    Nonce                                 `json:"-"`
 }
 
-func (b *Exchange) LoadSettings() {
-	settings, err := b.FuncGetSettings()
+func (e *Exchange) LoadSettings() {
+	settings, err := e.FuncGetSettings()
 	if err == nil {
-		b.ExchangeSettings = settings
+		nonce := Nonce{}
+		nonce.Set(time.Now().Unix())
+		settings.Nonce = nonce
+		e.ExchangeSettings = settings
 	}
 }
 
-func (b *Exchange) GetOrderbook(hit Hit) (Orderbook, error) {
-	return b.FuncGetOrderbook(hit)
+func (e *Exchange) GetOrderbook(hit Hit) (Orderbook, error) {
+	return e.FuncGetOrderbook(hit)
 }
 
-func (b *Exchange) GetPortfolio() (Portfolio, error) {
-	return b.FuncGetPortfolio()
+func (e *Exchange) GetPortfolio() (Portfolio, error) {
+	return e.FuncGetPortfolio()
 }
 
-func (b *Exchange) PostOrder(order Order) (Order, error) {
-	return b.FuncPostOrder(order)
+func (e *Exchange) PostOrder(order Order) (Order, error) {
+	return e.FuncPostOrder(order, e.ExchangeSettings)
 }
 
-func (b *Exchange) LoadPairsEnabled(joinedPairs string) {
+func (e *Exchange) LoadPairsEnabled(joinedPairs string) {
 	pairs := strings.Split(joinedPairs, ",")
-	b.PairsEnabled = []CurrencyPair{}
+	e.PairsEnabled = []CurrencyPair{}
 	for _, pair := range pairs {
 		c := strings.Split(pair, "_")
-		b.PairsEnabled = append(
-			b.PairsEnabled,
+		e.PairsEnabled = append(
+			e.PairsEnabled,
 			CurrencyPair{Currency(c[0]), Currency(c[1])})
 	}
 }

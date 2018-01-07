@@ -1,15 +1,40 @@
 package liqui
 
 import (
-	"encoding/json"
+	"crypto/hmac"
+	"crypto/sha512"
+	"encoding/hex"
+	"math"
+
 	"errors"
 	"fmt"
 	"log"
+	"net/http"
+	"net/url"
+	"strconv"
 	"strings"
 	"time"
 
 	"gotrading/core"
 	"gotrading/networking"
+
+	"github.com/json-iterator/go"
+)
+
+const (
+	liquiAPIPublicURL  = "https://api.Liqui.io/api/3"
+	liquiAPIPrivateURL = "https://api.Liqui.io/tapi"
+	liquiInfo          = "info"
+	liquiTicker        = "ticker"
+	liquiDepth         = "depth"
+	liquiTrades        = "trades"
+	liquiAccountInfo   = "getInfo"
+	liquiTrade         = "Trade"
+	liquiActiveOrders  = "ActiveOrders"
+	liquiOrderInfo     = "OrderInfo"
+	liquiCancelOrder   = "CancelOrder"
+	liquiTradeHistory  = "TradeHistory"
+	liquiWithdrawCoin  = "WithdrawCoin"
 )
 
 type Liqui struct {
@@ -26,7 +51,11 @@ func (b Liqui) GetSettings() func() (core.ExchangeSettings, error) {
 		response := Response{}
 		settings := core.ExchangeSettings{}
 		gatling := networking.SharedGatling()
-		contents, err := gatling.GET("https://api.liqui.io/api/3/info")
+
+		url := fmt.Sprintf("%s/%s", liquiAPIPublicURL, liquiInfo)
+
+		contents, err := gatling.GET(url)
+		var json = jsoniter.ConfigCompatibleWithStandardLibrary
 		err = json.Unmarshal(contents[:], &response)
 
 		if len(response.PairsSettings) == 0 {
@@ -66,11 +95,12 @@ func (b Liqui) GetOrderbook() func(hit core.Hit) (core.Orderbook, error) {
 		dst := &core.Orderbook{}
 		curr := strings.ToLower(fmt.Sprintf("%s_%s", endpoint.From, endpoint.To))
 
-		req := fmt.Sprintf("%s/%s/%s/%s?limit=3", "https://api.Liqui.io/api", "3", "depth", curr)
+		req := fmt.Sprintf("%s/%s/%s?limit=3", liquiAPIPublicURL, liquiDepth, curr)
 
 		start := time.Now()
 		gatling := networking.SharedGatling()
 		contents, err := gatling.GET(req)
+		var json = jsoniter.ConfigCompatibleWithStandardLibrary
 		err = json.Unmarshal(contents, &response.Orderbook)
 		if err != nil {
 			log.Println(string(contents[:]))
@@ -108,65 +138,80 @@ func (b Liqui) GetPortfolio() func() (core.Portfolio, error) {
 	}
 }
 
-func (b Liqui) PostOrder() func(order core.Order) (core.Order, error) {
-	return func(order core.Order) (core.Order, error) {
-		var o core.Order
+func (b Liqui) PostOrder() func(order core.Order, settings core.ExchangeSettings) (core.Order, error) {
+	return func(order core.Order, settings core.ExchangeSettings) (core.Order, error) {
 		var err error
-		fmt.Println("Posting Order on Liqui")
 
-		// exchange := r.Path.Hits[i].Endpoint.Exchange
-		// pair := strings.ToLower(string(r.Path.Hits[i].Endpoint.From)) + "_" + strings.ToLower(string(r.Path.Hits[i].Endpoint.To))
-		// var orderType string
-		// var amount float64
+		endpoint := order.Hit.Endpoint
+		from := string(endpoint.From)
+		to := string(endpoint.To)
+		remotePair := strings.ToLower(from + "_" + to)
+		pair := core.CurrencyPair{endpoint.From, endpoint.To}
 
-		// if o.TransactionType == core.Ask {
-		// 	orderType = "sell"
-		// 	amount = o.BaseVolumeIn
-		// } else {
-		// 	orderType = "buy"
-		// 	amount = o.QuoteVolumeIn / o.Price
-		// }
-		// price := o.Price
-		// // decimals := exec.chain.Path.Hits[i].Endpoint.Exchange.Liqui.Info.Pairs[pair].DecimalPlaces
-		// decimals := 8
-		// res, error := exchange.PostOrder(o)
+		var orderType string
+		var amount float64
+		decimals := float64(settings.PairsSettings[pair].DecimalPlaces)
 
-		// // res, error := exchange.Trade(pair, orderType, toFixed(amount, decimals), price)
-		// fmt.Println("Executing order:", pair, orderType, decimals, toFixed(amount, decimals), price, res, error)
+		if order.TransactionType == core.Ask {
+			orderType = "sell"
+			amount = order.BaseVolumeIn
+		} else {
+			orderType = "buy"
+			amount = order.QuoteVolumeIn / order.Price
+		}
+		rate := order.Price
+		amount = math.Ceil(amount*math.Pow(10, decimals)) / math.Pow(10, decimals)
 
-		return o, err
+		nonce := int(settings.Nonce.GetInc())
+
+		values := url.Values{}
+		values.Set("method", "Trade")
+		values.Set("nonce", strconv.Itoa(nonce))
+		values.Set("pair", remotePair)
+		values.Set("type", orderType)
+		values.Set("rate", strconv.FormatFloat(rate, 'f', -1, 64))
+		values.Set("amount", strconv.FormatFloat(amount, 'f', int(decimals), 64))
+		encoded := values.Encode()
+		fmt.Println("Executing order:", encoded)
+
+		h := hmac.New(sha512.New, []byte(settings.APISecret))
+		h.Write([]byte(encoded))
+		hmac := hex.EncodeToString(h.Sum(nil))
+
+		headers := make(map[string]string)
+		headers["Key"] = settings.APIKey
+		headers["Sign"] = hmac
+		headers["Content-Type"] = "application/x-www-form-urlencoded"
+
+		req, err := http.NewRequest("POST", liquiAPIPrivateURL, strings.NewReader(encoded))
+
+		if err != nil {
+			return order, err
+		}
+		for k, v := range headers {
+			req.Header.Add(k, v)
+		}
+		gatling := networking.SharedGatling()
+		contents, err := gatling.Send(req)
+
+		type Return struct {
+			Received float64            `json:"received"`
+			Remains  float64            `json:"remains"`
+			OrderID  int                `json:"order_id"`
+			Funds    map[string]float64 `json:"funds"`
+		}
+
+		type Response struct {
+			Return Return `json:"return"`
+		}
+
+		response := Response{}
+		var json = jsoniter.ConfigCompatibleWithStandardLibrary
+		err = json.Unmarshal(contents, &response.Return)
+		if err != nil {
+			log.Println(string(contents[:]))
+		}
+		fmt.Println(string(contents[:]))
+		return order, err
 	}
 }
-
-// func (g *Gatling) FetchUSD() float64 {
-// 	cp := pair.NewCurrencyPair("BTC", "USDT")
-
-// 	client := g.Clients[len(g.Clients)-1]
-
-// 	type Orderbook struct {
-// 		Asks [][]float64 `json:"asks"`
-// 		Bids [][]float64 `json:"bids"`
-// 	}
-// 	type Response struct {
-// 		Data map[string]Orderbook
-// 	}
-
-// 	response := Response{}
-// 	curr := fmt.Sprintf("%s", cp.Display("_", false))
-
-// 	req := fmt.Sprintf("%s/%s/%s/%s?limit=1", "https://api.Liqui.io/api", "3", "depth", curr)
-
-// 	g.SendHTTPGetRequest(client, req, true, false, &response.Data)
-// 	src := response.Data[curr]
-// 	return src.Asks[0][0]
-// }
-
-// func (b *Binance) Deposit(client http.Client) (bool, error) {
-// 	var err error
-// 	return true, err
-// }
-
-// func (b *Binance) Withdraw(client http.Client) (bool, error) {
-// 	var err error
-// 	return true, err
-// }

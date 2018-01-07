@@ -19,7 +19,7 @@ type standardizedExchange interface {
 	GetSettings() func() (core.ExchangeSettings, error)
 	GetOrderbook() func(hit core.Hit) (core.Orderbook, error)
 	GetPortfolio() func() (core.Portfolio, error)
-	PostOrder() func(order core.Order) (core.Order, error)
+	PostOrder() func(order core.Order, settings core.ExchangeSettings) (core.Order, error)
 	// Deposit(client http.Client) (bool, error)
 	// Withdraw(client http.Client) (bool, error)
 }
@@ -38,6 +38,9 @@ func (f *Factory) BuildExchange(name string) core.Exchange {
 		injectStandardizedMethods(&exchange, liqui.Liqui{})
 	default:
 	}
+	exchange.LoadSettings()
+	exchange.ExchangeSettings.APIKey = config["api_key"]
+	exchange.ExchangeSettings.APISecret = config["api_secret"]
 	return exchange
 }
 

@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"strconv"
 	"strings"
 
@@ -32,7 +33,6 @@ func main() {
 
 	for _, name := range exchangesEnabled {
 		exch := factory.BuildExchange(name)
-		exch.LoadSettings()
 		exchanges = append(exchanges, exch)
 	}
 
@@ -54,30 +54,39 @@ func main() {
 			sim := arbitrage.Simulation{}
 			sim.Init(hits)
 			sim.Run()
-			fmt.Println(sim.IsSuccessful())
-			if sim.IsSuccessful() == false {
-				if sim.IsIncomplete() == false {
-					go publisher.Send(sim.Report)
-				}
-				return
+
+			fmt.Println(".")
+			if sim.IsExecutable() {
+				fmt.Println(sim.Report.Path.Description())
+				exec := arbitrage.Execution{}
+				exec.Init(sim)
+				exec.Run()
+				os.Exit(3)
 			}
 
-			exec := arbitrage.Execution{}
-			exec.Init(sim)
-			exec.Run()
-			if exec.IsSuccessful() == false {
-				go publisher.Send(exec.Report)
-				// Recovery? Rollback?
-				return
-			}
+			// if sim.IsSuccessful() == false {
+			// 	if sim.IsIncomplete() == false {
+			// 		go publisher.Send(sim.Report)
+			// 	}
+			// 	return
+			// }
 
-			verif := arbitrage.Verification{}
-			verif.Init(exec)
-			verif.Run()
-			if verif.IsSuccessful() {
-				go publisher.Send(verif.Report)
-				// Log, return
-			}
+			// exec := arbitrage.Execution{}
+			// exec.Init(sim)
+			// exec.Run()
+			// if exec.IsSuccessful() == false {
+			// 	go publisher.Send(exec.Report)
+			// 	// Recovery? Rollback?
+			// 	return
+			// }
+
+			// verif := arbitrage.Verification{}
+			// verif.Init(exec)
+			// verif.Run()
+			// if verif.IsSuccessful() {
+			// 	go publisher.Send(verif.Report)
+			// 	// Log, return
+			// }
 		})
 	}
 }
