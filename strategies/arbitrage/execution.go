@@ -1,6 +1,7 @@
 package arbitrage
 
 import (
+	"gotrading/core"
 	"gotrading/networking"
 	"math"
 	"time"
@@ -24,13 +25,17 @@ func (exec *Execution) Init(sim Simulation) {
 }
 
 func (exec *Execution) Run() {
+	m := core.SharedPortfolioManager()
+
 	r := &exec.Report
 	r.IsExecutionSuccessful = true
 	r.Results = make([]string, len(r.Orders))
 	r.ExecutionStartedAt = time.Now()
+	r.PreExecutionPortfolioStateID = m.LastStateID
 
 	batch := networking.Batch{}
 	batch.PostOrders(r.Orders)
+	r.PostExecutionPortfolioStateID = m.LastStateID
 
 	// for i, o := range r.Orders {
 	// 	exchange := o.Hit.Endpoint.Exchange

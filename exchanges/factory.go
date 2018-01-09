@@ -18,8 +18,8 @@ type Factory struct {
 type standardizedExchange interface {
 	GetSettings() func() (core.ExchangeSettings, error)
 	GetOrderbook() func(hit core.Hit) (core.Orderbook, error)
-	GetPortfolio() func() (core.Portfolio, error)
-	PostOrder() func(order core.Order, settings core.ExchangeSettings) (core.Order, error)
+	GetPortfolio() func(core.ExchangeSettings) (core.Portfolio, error)
+	PostOrder() func(core.Order, core.ExchangeSettings) (core.Order, error)
 	// Deposit(client http.Client) (bool, error)
 	// Withdraw(client http.Client) (bool, error)
 }
@@ -41,6 +41,14 @@ func (f *Factory) BuildExchange(name string) core.Exchange {
 	exchange.LoadSettings()
 	exchange.ExchangeSettings.APIKey = config["api_key"]
 	exchange.ExchangeSettings.APISecret = config["api_secret"]
+	portfolio, err := exchange.GetPortfolio()
+	if err == nil {
+		manager := core.SharedPortfolioManager()
+		state := core.NewPortfolioStateFromPositions(portfolio.Positions)
+		manager.UpdateWithNewState(state, false)
+	} else {
+		fmt.Println(err)
+	}
 	return exchange
 }
 

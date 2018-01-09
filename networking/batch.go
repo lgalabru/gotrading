@@ -64,8 +64,7 @@ func (b *Batch) PostOrders(orders []core.Order) {
 		}
 	}
 	for range orders {
-		sortedOrder := <-c
-		fmt.Println(sortedOrder)
+		<-c
 		// path.Hits[sortedOrder.Index] = sortedOrder.Order
 	}
 	// fn(path)
@@ -77,6 +76,5 @@ func (b *Batch) PostOrder(order core.Order, i int, c chan sortedOrder) {
 	o, err := exchange.PostOrder(order)
 	fmt.Println(o)
 	fmt.Println(err)
-	// hit.Endpoint.Orderbook = &o
-	// c <- indexedHit{i, hit}
+	c <- sortedOrder{i, &o}
 }

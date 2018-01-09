@@ -27,8 +27,8 @@ func (b Binance) GetOrderbook() func(hit core.Hit) (core.Orderbook, error) {
 	}
 }
 
-func (b Binance) GetPortfolio() func() (core.Portfolio, error) {
-	return func() (core.Portfolio, error) {
+func (b Binance) GetPortfolio() func(settings core.ExchangeSettings) (core.Portfolio, error) {
+	return func(settings core.ExchangeSettings) (core.Portfolio, error) {
 		var p core.Portfolio
 		var err error
 		fmt.Println("Getting Portfolio from Binance")

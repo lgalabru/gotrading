@@ -26,6 +26,7 @@ type Order struct {
 	BaseVolumeOut      float64              `json:"baseVolumeOut"`
 	QuoteVolumeIn      float64              `json:"quoteVolumeIn"`
 	QuoteVolumeOut     float64              `json:"quoteVolumeOut"`
+	Progress           float64              `json:"progress"`
 }
 
 // InitAsk initialize an Order, setting the transactionType to Ask

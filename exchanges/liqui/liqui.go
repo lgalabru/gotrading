@@ -28,7 +28,7 @@ const (
 	liquiTicker        = "ticker"
 	liquiDepth         = "depth"
 	liquiTrades        = "trades"
-	liquiAccountInfo   = "getInfo"
+	liquiGetInfo       = "getInfo"
 	liquiTrade         = "Trade"
 	liquiActiveOrders  = "ActiveOrders"
 	liquiOrderInfo     = "OrderInfo"
@@ -129,15 +129,6 @@ func (b Liqui) GetOrderbook() func(hit core.Hit) (core.Orderbook, error) {
 	}
 }
 
-func (b Liqui) GetPortfolio() func() (core.Portfolio, error) {
-	return func() (core.Portfolio, error) {
-		var p core.Portfolio
-		var err error
-		fmt.Println("Getting Portfolio from Liqui")
-		return p, err
-	}
-}
-
 func (b Liqui) PostOrder() func(order core.Order, settings core.ExchangeSettings) (core.Order, error) {
 	return func(order core.Order, settings core.ExchangeSettings) (core.Order, error) {
 		var err error
@@ -195,10 +186,11 @@ func (b Liqui) PostOrder() func(order core.Order, settings core.ExchangeSettings
 		contents, err := gatling.Send(req)
 
 		type Return struct {
-			Received float64            `json:"received"`
-			Remains  float64            `json:"remains"`
-			OrderID  int                `json:"order_id"`
-			Funds    map[string]float64 `json:"funds"`
+			Received    float64            `json:"received"`
+			Remains     float64            `json:"remains"`
+			OrderID     int                `json:"order_id"`
+			InitOrderID int                `json:"init_order_id"`
+			Funds       map[string]float64 `json:"funds"`
 		}
 
 		type Response struct {
@@ -207,11 +199,79 @@ func (b Liqui) PostOrder() func(order core.Order, settings core.ExchangeSettings
 
 		response := Response{}
 		var json = jsoniter.ConfigCompatibleWithStandardLibrary
-		err = json.Unmarshal(contents, &response.Return)
+		err = json.Unmarshal(contents, &response)
 		if err != nil {
 			log.Println(string(contents[:]))
 		}
 		fmt.Println(string(contents[:]))
+
+		order.Progress = response.Return.Received / amount
+		funds := response.Return.Funds
+
+		state := core.NewPortfolioState()
+		for curr := range funds {
+			state.UpdatePosition(settings.Name, core.Currency(strings.ToUpper(curr)), funds[curr])
+		}
+		manager := core.SharedPortfolioManager()
+		manager.UpdateWithNewState(state, false)
+
 		return order, err
+	}
+}
+
+func (b Liqui) GetPortfolio() func(settings core.ExchangeSettings) (core.Portfolio, error) {
+	return func(settings core.ExchangeSettings) (core.Portfolio, error) {
+		portfolio := core.Portfolio{}
+		var err error
+		fmt.Println("Getting Portfolio from Liqui")
+
+		nonce := int(settings.Nonce.GetInc())
+
+		values := url.Values{}
+		values.Set("method", liquiGetInfo)
+		values.Set("nonce", strconv.Itoa(nonce))
+		encoded := values.Encode()
+
+		h := hmac.New(sha512.New, []byte(settings.APISecret))
+		h.Write([]byte(encoded))
+		hmac := hex.EncodeToString(h.Sum(nil))
+
+		headers := make(map[string]string)
+		headers["Key"] = settings.APIKey
+		headers["Sign"] = hmac
+		headers["Content-Type"] = "application/x-www-form-urlencoded"
+
+		req, err := http.NewRequest("POST", liquiAPIPrivateURL, strings.NewReader(encoded))
+
+		if err != nil {
+			return portfolio, err
+		}
+		for k, v := range headers {
+			req.Header.Add(k, v)
+		}
+		gatling := networking.SharedGatling()
+		contents, err := gatling.Send(req)
+
+		type Return struct {
+			Funds map[string]float64 `json:"funds"`
+		}
+
+		type Response struct {
+			Return Return `json:"return"`
+		}
+
+		response := Response{}
+		var json = jsoniter.ConfigCompatibleWithStandardLibrary
+		err = json.Unmarshal(contents, &response)
+		if err != nil {
+			log.Println(err)
+		}
+
+		funds := response.Return.Funds
+		for curr := range funds {
+			portfolio.UpdatePosition(settings.Name, core.Currency(strings.ToUpper(curr)), funds[curr])
+		}
+
+		return portfolio, err
 	}
 }
