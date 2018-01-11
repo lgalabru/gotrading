@@ -29,9 +29,9 @@ type Report struct {
 	ExecutionEndedAt              time.Time    `json:"executionEndedAt"`
 	PostExecutionPortfolioStateID string       `json:"postExecutionPortfolioStateID"`
 	IsExecutionSuccessful         bool         `json:"isExecutionSuccessful"`
-	VerificationStartedAt         time.Time    `json:"verificationStartedAt"`
-	VerificationEndedAt           time.Time    `json:"verificationEndedAt"`
-	IsVerificationSuccessful      bool         `json:"isVerificationSuccessful"`
+	ValidationStartedAt           time.Time    `json:"validationStartedAt"`
+	ValidationEndedAt             time.Time    `json:"validationEndedAt"`
+	SimulationMinusExecution      float64      `json:"simulationMinusExecution"`
 }
 
 func (r Report) Encode() ([]byte, error) {

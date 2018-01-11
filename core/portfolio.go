@@ -1,6 +1,7 @@
 package core
 
 import (
+	"fmt"
 	"sync"
 
 	uuid "github.com/satori/go.uuid"
@@ -29,14 +30,20 @@ type PortfolioState struct {
 }
 
 // Portfolio wraps all your positions
+type PortfolioStateSlice struct {
+	Exch      string
+	Positions map[Currency]float64
+}
+
+// Portfolio wraps all your positions
 type Portfolio struct {
 	Positions map[string]map[Currency]float64
 }
 
 // Update position
 func (m *PortfolioStateManager) PushState(state PortfolioState) {
-	m.States[state.StateID] = state
 	m.LastStateID = state.StateID
+	m.States[state.StateID] = state
 }
 
 func NewPortfolioStateFromPositions(positions map[string]map[Currency]float64) PortfolioState {
@@ -61,24 +68,31 @@ func (m *PortfolioStateManager) Position(stateID, exch string, curr Currency) fl
 	return m.States[stateID].Positions[exch][curr]
 }
 
+func (m *PortfolioStateManager) CurrentPosition(exch string, curr Currency) float64 {
+	return m.States[m.LastStateID].Positions[exch][curr]
+}
+
 // Update position
 func (m *PortfolioStateManager) UpdateWithNewState(state PortfolioState, override bool) {
 	if override || len(m.States) == 0 {
 		m.PushState(state)
 	} else {
-		current := m.States[m.LastStateID]
-		for exch := range state.Positions {
-			if current.Positions[exch] == nil {
-				current.Positions[exch] = make(map[Currency]float64)
-			}
+		last := m.States[m.LastStateID]
+		new := NewPortfolioState()
+		new.StateID = (uuid.NewV4()).String()
+
+		for exch := range last.Positions {
+			new.Positions[exch] = make(map[Currency]float64)
 			for currency := range state.Positions[exch] {
-				current.Positions[exch][currency] = state.Positions[exch][currency]
+				new.Positions[exch][currency] = last.Positions[exch][currency]
 			}
 		}
-		uuid := (uuid.NewV4()).String()
-		current.StateID = uuid
-
-		m.PushState(current)
+		for exch := range state.Positions {
+			for currency := range state.Positions[exch] {
+				new.Positions[exch][currency] = state.Positions[exch][currency]
+			}
+		}
+		m.PushState(new)
 	}
 }
 

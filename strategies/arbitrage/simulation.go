@@ -39,6 +39,8 @@ func (sim *Simulation) Run() {
 		r.IsSimulationSuccessful = true
 		r.Orders = make([]core.Order, len(path.Hits))
 
+		m := core.SharedPortfolioManager()
+
 		for i, n := range path.Hits {
 			if n.Endpoint.Orderbook == nil {
 				r.IsSimulationSuccessful = false
@@ -100,7 +102,9 @@ func (sim *Simulation) Run() {
 			r.Performance = fromInitialToCurrent
 
 			if i == 0 {
-				r.VolumeToEngage = volumeOfCurrencyToSell
+				initialBalance := m.CurrentPosition(n.Endpoint.Exchange.Name, n.SoldCurrency)
+				initialBalance = initialBalance - (initialBalance * 0.25)
+				r.VolumeToEngage = math.Min(initialBalance, volumeOfCurrencyToSell)
 			} else {
 				limitingAmount := r.VolumeToEngage * fromInitialToCurrent
 				currentAmount := volumeOfCurrencyToSell * priceOfCurrencyToSell
