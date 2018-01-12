@@ -1,6 +1,8 @@
 package arbitrage
 
 import (
+	"crypto/sha1"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"time"
@@ -10,6 +12,7 @@ import (
 )
 
 type Report struct {
+	Id                            *string      `json:"id"`
 	Path                          graph.Path   `json:"-"`
 	Orders                        []core.Order `json:"orders"`
 	Performance                   float64      `json:"performance"`
@@ -36,6 +39,11 @@ type Report struct {
 }
 
 func (r Report) Encode() ([]byte, error) {
+	desc := r.Path.Description()
+	h := sha1.New()
+	h.Write([]byte(desc))
+	enc := hex.EncodeToString(h.Sum(nil))
+	r.Id = &enc
 	return json.Marshal(r)
 }
 
