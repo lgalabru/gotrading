@@ -45,9 +45,10 @@ func (pub *Publisher) Close() {
 }
 
 func (pub *Publisher) Send(report Report) {
-	marshal, err := report.Encode()
+	marshal, _ := report.Encode()
 
-	fmt.Println(err)
+	fmt.Println(report.Description())
+	// fmt.Println(err)
 	pub.channel.Publish(
 		pub.exchangeName, // exchange
 		pub.routingKey,   // routing key

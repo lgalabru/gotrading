@@ -53,9 +53,9 @@ func main() {
 			sim.Init(hits)
 			sim.Run()
 			if sim.IsSuccessful() == false {
-				if sim.IsIncomplete() == false {
-					go publisher.Send(sim.Report)
-				}
+				// if sim.IsExecutable() == false {
+				go publisher.Send(sim.Report)
+				// }
 				return
 			}
 
@@ -71,7 +71,7 @@ func main() {
 			valid := arbitrage.Validation{}
 			valid.Init(exec)
 			valid.Run()
-			go publisher.Send(verif.Report)
+			go publisher.Send(valid.Report)
 		})
 	}
 }

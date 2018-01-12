@@ -2,6 +2,7 @@ package arbitrage
 
 import (
 	"encoding/json"
+	"fmt"
 	"time"
 
 	"gotrading/core"
@@ -36,4 +37,9 @@ type Report struct {
 
 func (r Report) Encode() ([]byte, error) {
 	return json.Marshal(r)
+}
+
+func (r Report) Description() string {
+	str := fmt.Sprintf("%s: %f", r.Path.Description(), r.VolumeOut-r.VolumeIn)
+	return str
 }

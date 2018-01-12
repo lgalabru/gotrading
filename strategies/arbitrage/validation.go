@@ -15,9 +15,9 @@ func (v *Validation) Init(exec Execution) {
 
 func (v *Validation) Run() {
 	m := core.SharedPortfolioManager()
-	r.ValidationStartedAt = time.Now()
 
 	r := &v.Report
+	r.ValidationStartedAt = time.Now()
 
 	simIn := r.VolumeIn
 	simOut := r.VolumeOut
