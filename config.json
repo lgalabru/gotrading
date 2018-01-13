@@ -1,8 +1,8 @@
 {
   "exchanges": {
     "Liqui": {
-      "api_key": "NX8DU5D5-MYDPL6Y4-T921VIUO-CVU0ZW33-H728HY8F",
-      "api_secret": "e1cd6cff97051bb118382c25a7e83ea39eb052f37d450273349adb11e1146f0e",
+      "api_key": "TAU3HM65-M30J2QRG-9I8OQ3AA-MOA47E5L-S8TWMS9B",
+      "api_secret": "604b4cca615b6510ffbff19b427d3de20e018f47186e6e30bff1828d3c46a9a9",
       "verbose": false,
       "max_requests_per_sec": 4,
       "pairs_enabled": "ETH_BTC,TRX_ETH,TRX_BTC"
