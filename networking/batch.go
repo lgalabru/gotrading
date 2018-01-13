@@ -28,17 +28,14 @@ func (b *Batch) UpdateOrderbooks(hits []*core.Hit, fn pathFetched) {
 	path.Hits = hits
 	c := make(chan sortedHit, len(hits))
 
-	for i, n := range hits {
+	for i, h := range hits {
 		if len(g.Clients) > 1 {
-			go b.GetOrderbook(n, i, c)
+			go b.GetOrderbook(h, i, c)
 		} else {
-			b.GetOrderbook(n, i, c)
+			b.GetOrderbook(h, i, c)
 		}
 	}
-	for range hits {
-		sortedHit := <-c
-		path.Hits[sortedHit.Index] = sortedHit.Hit
-	}
+	<-c
 	path.Encode()
 	fn(path)
 }

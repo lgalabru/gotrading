@@ -11,10 +11,8 @@ import (
 )
 
 type Simulation struct {
-	StartedAt time.Time `json:"startedAt"`
-	EndedAt   time.Time `json:"endedAt"`
-	hits      []*core.Hit
-	Report    Report
+	hits   []*core.Hit
+	Report Report
 }
 
 func (sim *Simulation) Init(hits []*core.Hit) {
@@ -169,7 +167,7 @@ func (sim *Simulation) Run() {
 }
 
 func (sim *Simulation) IsSuccessful() bool {
-	return sim.Report.IsSimulationSuccessful
+	return sim.Report.IsSimulationSuccessful && sim.Report.IsTradedVolumeEnough
 }
 
 func (sim *Simulation) IsExecutable() bool {

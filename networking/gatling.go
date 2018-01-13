@@ -107,12 +107,16 @@ func (g *Gatling) Send(request *http.Request) ([]byte, error) {
 		log.Println("Gatling> Preparing interface", request.URL)
 	}
 
-	client := g.Clients[0]
+	if len(g.Clients) > 1 {
+		g.RoundRobin = (g.RoundRobin + 1) % 3
+	} else {
+		g.RoundRobin = 0
+	}
+	client := g.Clients[g.RoundRobin]
 
 	var contents []byte
 	var err error
 
-	mutex := g.Mutexes[client]
 	URL := request.URL
 	hostname := URL.Hostname()
 	maxRequestsPerSeconds := g.MaxRequestsPerSecondsForHost[hostname]
@@ -120,24 +124,19 @@ func (g *Gatling) Send(request *http.Request) ([]byte, error) {
 		maxRequestsPerSeconds = g.DefaultMaxRequestsPerSecondsForHost
 	}
 	delayBetweenRequests := 1.0 / float64(maxRequestsPerSeconds)
-	mutex.RLock()
 	lastOccurence, ok := g.LastRequestFromClientToHostOccuredAt[client][hostname]
-	mutex.RUnlock()
 
 	t := delayBetweenRequests - time.Since(lastOccurence).Seconds()
 	if ok && t > 0 {
 		time.Sleep(time.Duration(t*1000) * time.Millisecond)
 	}
 
-	mutex.Lock()
 	if _, ok := g.LastRequestFromClientToHostOccuredAt[client]; ok {
 		g.LastRequestFromClientToHostOccuredAt[client][hostname] = time.Now()
-
 	} else {
 		g.LastRequestFromClientToHostOccuredAt[client] = make(map[string]time.Time)
 		g.LastRequestFromClientToHostOccuredAt[client][hostname] = time.Now()
 	}
-	mutex.Unlock()
 
 	res, err := client.Do(request)
 	if err != nil {

@@ -30,6 +30,7 @@ func (f *Factory) BuildExchange(name string) core.Exchange {
 	fmt.Println("Building", name, config)
 
 	exchange := core.Exchange{}
+	exchange.Name = name
 	exchange.LoadPairsEnabled(config["pairs_enabled"])
 	switch name {
 	case "Binance":

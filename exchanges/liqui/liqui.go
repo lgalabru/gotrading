@@ -93,9 +93,11 @@ func (b Liqui) GetOrderbook() func(hit core.Hit) (core.Orderbook, error) {
 		response := Response{}
 		endpoint := hit.Endpoint
 		dst := &core.Orderbook{}
+		dst.CurrencyPair = core.CurrencyPair{Base: endpoint.From, Quote: endpoint.To}
 		curr := strings.ToLower(fmt.Sprintf("%s_%s", endpoint.From, endpoint.To))
 
-		req := fmt.Sprintf("%s/%s/%s?limit=3", liquiAPIPublicURL, liquiDepth, curr)
+		depth := 3
+		req := fmt.Sprintf("%s/%s/%s?limit=%d", liquiAPIPublicURL, liquiDepth, curr, depth)
 
 		start := time.Now()
 		gatling := networking.SharedGatling()
@@ -109,18 +111,16 @@ func (b Liqui) GetOrderbook() func(hit core.Hit) (core.Orderbook, error) {
 		src := response.Orderbook[curr]
 
 		if err == nil {
-			dst.Bids = make([]core.Order, 0)
-			dst.Asks = make([]core.Order, 0)
+			dst.Bids = make([]core.Order, depth)
+			dst.Asks = make([]core.Order, depth)
 			dst.StartedLastUpdateAt = start
 			dst.EndedLastUpdateAt = end
 
-			for _, ask := range src.Asks {
-				a := core.NewAsk(ask[0], ask[1])
-				dst.Asks = append(dst.Asks, a)
+			for i, ask := range src.Asks {
+				dst.Asks[i] = core.NewAsk(ask[0], ask[1])
 			}
-			for _, bid := range src.Bids {
-				b := core.NewBid(bid[0], bid[1])
-				dst.Bids = append(dst.Bids, b)
+			for i, bid := range src.Bids {
+				dst.Bids[i] = core.NewBid(bid[0], bid[1])
 			}
 		} else {
 			fmt.Println("Error", endpoint.Description(), err)
