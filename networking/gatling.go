@@ -101,7 +101,7 @@ func (g *Gatling) warmUp() {
 	}
 }
 
-func (g *Gatling) Send(request *http.Request) ([]byte, error) {
+func (g *Gatling) Send(request *http.Request) ([]byte, error, time.Time, time.Time) {
 
 	if g.IsVerbose {
 		log.Println("Gatling> Preparing interface", request.URL)
@@ -138,26 +138,27 @@ func (g *Gatling) Send(request *http.Request) ([]byte, error) {
 		g.LastRequestFromClientToHostOccuredAt[client][hostname] = time.Now()
 	}
 
+	start := time.Now()
 	res, err := client.Do(request)
 	if err != nil {
-		return nil, err
+		return nil, err, start, time.Now()
 	}
 
 	if res.StatusCode != 200 {
-		return nil, fmt.Errorf("common.SendHTTPGetRequest() error: HTTP status code %d", res.StatusCode)
+		return nil, fmt.Errorf("common.SendHTTPGetRequest() error: HTTP status code %d", res.StatusCode), start, time.Now()
 	}
 
 	contents, err = ioutil.ReadAll(res.Body)
 	if err != nil {
-		return nil, err
+		return nil, err, start, time.Now()
 	}
 
 	defer res.Body.Close()
 
-	return contents, err
+	return contents, err, start, time.Now()
 }
 
-func (g *Gatling) GET(url string) ([]byte, error) {
+func (g *Gatling) GET(url string) ([]byte, error, time.Time, time.Time) {
 	req, _ := http.NewRequest("GET", url, nil)
 	return g.Send(req)
 }

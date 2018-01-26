@@ -13,7 +13,6 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
-	"time"
 
 	"gotrading/core"
 	"gotrading/networking"
@@ -54,7 +53,7 @@ func (b Liqui) GetSettings() func() (core.ExchangeSettings, error) {
 
 		url := fmt.Sprintf("%s/%s", liquiAPIPublicURL, liquiInfo)
 
-		contents, err := gatling.GET(url)
+		contents, err, _, _ := gatling.GET(url)
 		var json = jsoniter.ConfigCompatibleWithStandardLibrary
 		err = json.Unmarshal(contents[:], &response)
 
@@ -99,15 +98,13 @@ func (b Liqui) GetOrderbook() func(hit core.Hit) (core.Orderbook, error) {
 		depth := 3
 		req := fmt.Sprintf("%s/%s/%s?limit=%d", liquiAPIPublicURL, liquiDepth, curr, depth)
 
-		start := time.Now()
 		gatling := networking.SharedGatling()
-		contents, err := gatling.GET(req)
+		contents, err, start, end := gatling.GET(req)
 		var json = jsoniter.ConfigCompatibleWithStandardLibrary
 		err = json.Unmarshal(contents, &response.Orderbook)
 		if err != nil {
 			log.Println(string(contents[:]))
 		}
-		end := time.Now()
 		src := response.Orderbook[curr]
 
 		if err == nil {
@@ -183,7 +180,7 @@ func (b Liqui) PostOrder() func(order core.Order, settings core.ExchangeSettings
 			req.Header.Add(k, v)
 		}
 		gatling := networking.SharedGatling()
-		contents, err := gatling.Send(req)
+		contents, err, _, _ := gatling.Send(req)
 
 		type Return struct {
 			Received    float64            `json:"received"`
@@ -250,7 +247,7 @@ func (b Liqui) GetPortfolio() func(settings core.ExchangeSettings) (core.Portfol
 			req.Header.Add(k, v)
 		}
 		gatling := networking.SharedGatling()
-		contents, err := gatling.Send(req)
+		contents, err, _, _ := gatling.Send(req)
 
 		type Return struct {
 			Funds map[string]float64 `json:"funds"`
