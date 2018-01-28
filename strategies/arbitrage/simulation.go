@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"gotrading/core"
-	"gotrading/graph"
 	"gotrading/networking"
 )
 
@@ -16,7 +15,11 @@ type Simulation struct {
 }
 
 func (sim *Simulation) Init(hits []*core.Hit) {
-	sim.hits = hits
+	sim.hits = make([]*core.Hit, len(hits))
+	for i, h := range hits {
+		copy := *h
+		sim.hits[i] = &copy
+	}
 	sim.Report = Report{}
 }
 
@@ -25,22 +28,24 @@ func (sim *Simulation) Run() {
 	r.SimulationStartedAt = time.Now()
 	r.IsSimulationIncomplete = false
 	batch := networking.Batch{}
-	batch.UpdateOrderbooks(sim.hits, func(path graph.Path) {
+	batch.GetOrderbooks(sim.hits, func(orderbooks []*core.Orderbook) {
 
 		fromInitialToCurrent := float64(1)
 
 		// rateForInitialCurrency := float64(1) // How many INITIAL_CURRENCY are we getting for 1 CURRENT_CURRENCY
 
 		r.Cost = 0
-		r.Rates = make([]float64, len(path.Hits))
-		r.AdjustedVolumes = make([]float64, len(path.Hits))
+		r.Rates = make([]float64, len(sim.hits))
+		r.AdjustedVolumes = make([]float64, len(sim.hits))
 		r.IsSimulationSuccessful = true
-		r.Orders = make([]core.Order, len(path.Hits))
+		r.Orders = make([]core.Order, len(sim.hits))
 
 		m := core.SharedPortfolioManager()
 
-		for i, n := range path.Hits {
-			if n.Endpoint.Orderbook == nil {
+		for i, n := range sim.hits {
+			orderbook := orderbooks[i]
+			n.Endpoint.Orderbook = orderbook
+			if orderbook == nil {
 				r.IsSimulationSuccessful = false
 				r.SimulationEndedAt = time.Now()
 				r.IsSimulationIncomplete = true
@@ -53,8 +58,8 @@ func (sim *Simulation) Run() {
 
 			if n.IsBaseToQuote {
 				// We are selling the base -> we match the Bid.
-				if len(n.Endpoint.Orderbook.Bids) > 0 {
-					bestBid := n.Endpoint.Orderbook.Bids[0]
+				if len(orderbook.Bids) > 0 {
+					bestBid := orderbook.Bids[0]
 					o, err := bestBid.CreateMatchingAsk()
 					if err == nil {
 						order = *o
@@ -74,8 +79,8 @@ func (sim *Simulation) Run() {
 				}
 			} else {
 				// We are selling the quote <=> we are buying the base -> we match the Ask.
-				if len(n.Endpoint.Orderbook.Asks) > 0 {
-					bestAsk := n.Endpoint.Orderbook.Asks[0]
+				if len(orderbook.Asks) > 0 {
+					bestAsk := orderbook.Asks[0]
 					o, err := bestAsk.CreateMatchingBid()
 					if err == nil {
 						order = *o
@@ -113,12 +118,12 @@ func (sim *Simulation) Run() {
 			r.Orders[i] = order
 		}
 
-		for i, n := range path.Hits {
+		for i, n := range sim.hits {
 			var currentVolumeToEngage float64
 			if i == 0 {
 				currentVolumeToEngage = r.VolumeToEngage
 			} else {
-				if path.Hits[i-1].IsBaseToQuote {
+				if sim.hits[i-1].IsBaseToQuote {
 					currentVolumeToEngage = r.Orders[i-1].QuoteVolumeOut
 				} else if r.Orders[i-1].TransactionType == core.Bid {
 					currentVolumeToEngage = r.Orders[i-1].BaseVolumeOut
@@ -136,7 +141,6 @@ func (sim *Simulation) Run() {
 			}
 			r.Cost = r.Cost + r.Orders[i].Fee*r.Rates[i]
 		}
-		r.Path = path
 
 		firstOrder := r.Orders[0]
 		if firstOrder.TransactionType == core.Bid {
@@ -152,6 +156,7 @@ func (sim *Simulation) Run() {
 			r.VolumeOut = lastOrder.QuoteVolumeOut
 		}
 
+		fmt.Println(r.VolumeIn, r.VolumeOut)
 		if r.VolumeIn < 0.0001 || r.VolumeOut < 0.0001 {
 			fmt.Println("Traded volume under threshold")
 			r.IsTradedVolumeEnough = false

@@ -3,17 +3,16 @@ package networking
 import (
 	"fmt"
 	"gotrading/core"
-	"gotrading/graph"
 )
 
 type Batch struct {
 }
 
-type pathFetched func(path graph.Path)
+type orderbooksFetched func(orderbooks []*core.Orderbook)
 
-type sortedHit struct {
-	Index int
-	Hit   *core.Hit
+type sortedOrderbook struct {
+	Index     int
+	Orderbook *core.Orderbook
 }
 
 type sortedOrder struct {
@@ -21,12 +20,11 @@ type sortedOrder struct {
 	Order *core.Order
 }
 
-func (b *Batch) UpdateOrderbooks(hits []*core.Hit, fn pathFetched) {
+func (b *Batch) GetOrderbooks(hits []*core.Hit, fn orderbooksFetched) {
 	g := SharedGatling()
 
-	path := graph.Path{}
-	path.Hits = hits
-	c := make(chan sortedHit, len(hits))
+	orderbooks := make([]*core.Orderbook, len(hits))
+	c := make(chan sortedOrderbook, len(hits))
 
 	for i, h := range hits {
 		if len(g.Clients) > 1 {
@@ -36,34 +34,38 @@ func (b *Batch) UpdateOrderbooks(hits []*core.Hit, fn pathFetched) {
 		}
 	}
 	<-c
-	path.Encode()
-	fn(path)
+	for elem := range c {
+		orderbooks[elem.Index] = elem.Orderbook
+		fmt.Println(elem)
+	}
+	close(c)
+	fmt.Println("Orderbooks fetched")
+	fn(orderbooks)
 }
 
-func (b *Batch) GetOrderbook(hit *core.Hit, i int, c chan sortedHit) {
+func (b *Batch) GetOrderbook(hit *core.Hit, i int, c chan sortedOrderbook) {
 	exchange := hit.Endpoint.Exchange
 
 	o, _ := exchange.GetOrderbook(*hit)
-	hit.Endpoint.Orderbook = &o
-	c <- sortedHit{i, hit}
+	c <- sortedOrderbook{i, &o}
 }
 
 func (b *Batch) PostOrders(orders []core.Order) {
-	g := SharedGatling()
+	// g := SharedGatling()
 
 	c := make(chan sortedOrder, len(orders))
 
 	for i, o := range orders {
-		if len(g.Clients) > 1 {
-			go b.PostOrder(o, i, c)
-		} else {
-			b.PostOrder(o, i, c)
-		}
+		// if len(g.Clients) > 1 {
+		// 	go b.PostOrder(o, i, c)
+		// } else {
+		b.PostOrder(o, i, c)
+		// }
 	}
-	for range orders {
-		<-c
-		// path.Hits[sortedOrder.Index] = sortedOrder.Order
-	}
+	// for range orders {
+	<-c
+	// path.Hits[sortedOrder.Index] = sortedOrder.Order
+	// }
 	// fn(path)
 }
 
