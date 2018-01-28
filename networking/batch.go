@@ -33,13 +33,10 @@ func (b *Batch) GetOrderbooks(hits []*core.Hit, fn orderbooksFetched) {
 			b.GetOrderbook(h, i, c)
 		}
 	}
-	<-c
+	close(c)
 	for elem := range c {
 		orderbooks[elem.Index] = elem.Orderbook
-		fmt.Println(elem)
 	}
-	close(c)
-	fmt.Println("Orderbooks fetched")
 	fn(orderbooks)
 }
 
