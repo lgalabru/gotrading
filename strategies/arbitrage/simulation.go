@@ -28,17 +28,17 @@ func (sim *Simulation) Run() {
 	r.SimulationStartedAt = time.Now()
 	r.IsSimulationIncomplete = false
 	batch := networking.Batch{}
+
 	batch.GetOrderbooks(sim.hits, func(orderbooks []*core.Orderbook) {
 
-		fromInitialToCurrent := float64(1)
-
-		// rateForInitialCurrency := float64(1) // How many INITIAL_CURRENCY are we getting for 1 CURRENT_CURRENCY
-
+		r.SimulationComputingStartedAt = time.Now()
 		r.Cost = 0
 		r.Rates = make([]float64, len(sim.hits))
 		r.AdjustedVolumes = make([]float64, len(sim.hits))
 		r.IsSimulationSuccessful = true
 		r.Orders = make([]core.Order, len(sim.hits))
+		fromInitialToCurrent := float64(1)
+		// rateForInitialCurrency := float64(1) // How many INITIAL_CURRENCY are we getting for 1 CURRENT_CURRENCY
 
 		m := core.SharedPortfolioManager()
 
