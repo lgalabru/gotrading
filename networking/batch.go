@@ -1,7 +1,6 @@
 package networking
 
 import (
-	"fmt"
 	"gotrading/core"
 )
 
@@ -10,14 +9,16 @@ type Batch struct {
 
 type orderbooksFetched func(orderbooks []*core.Orderbook)
 
+type ordersPosted func(orders []core.OrderDispatched)
+
 type sortedOrderbook struct {
 	Index     int
 	Orderbook *core.Orderbook
 }
 
 type sortedOrder struct {
-	Index int
-	Order *core.Order
+	Index           int
+	OrderDispatched core.OrderDispatched
 }
 
 func (b *Batch) GetOrderbooks(hits []*core.Hit, fn orderbooksFetched) {
@@ -49,30 +50,31 @@ func (b *Batch) GetOrderbook(hit *core.Hit, i int, c chan sortedOrderbook) {
 	c <- sortedOrderbook{i, &o}
 }
 
-func (b *Batch) PostOrders(orders []core.Order) {
-	// g := SharedGatling()
+func (b *Batch) PostOrders(orders []core.Order, fn ordersPosted) {
+	g := SharedGatling()
 
+	dispOrders := make([]core.OrderDispatched, len(orders))
 	c := make(chan sortedOrder, len(orders))
 
 	for i, o := range orders {
-		// if len(g.Clients) > 1 {
-		// 	go b.PostOrder(o, i, c)
-		// } else {
-		b.PostOrder(o, i, c)
-		// }
+		if len(g.Clients) > 1 {
+			go b.PostOrder(o, i, c)
+		} else {
+			b.PostOrder(o, i, c)
+		}
 	}
-	// for range orders {
-	<-c
-	// path.Hits[sortedOrder.Index] = sortedOrder.Order
-	// }
-	// fn(path)
+
+	for range orders {
+		elem := <-c
+		dispOrders[elem.Index] = elem.OrderDispatched
+	}
+	close(c)
+	fn(dispOrders)
 }
 
 func (b *Batch) PostOrder(order core.Order, i int, c chan sortedOrder) {
 	exchange := order.Hit.Endpoint.Exchange
 
-	o, err := exchange.PostOrder(order)
-	fmt.Println(o)
-	fmt.Println(err)
-	c <- sortedOrder{i, &o}
+	od, _ := exchange.PostOrder(order)
+	c <- sortedOrder{i, od}
 }

@@ -10,10 +10,10 @@ type Exchange struct {
 	PairsEnabled     []CurrencyPair   `json:"-"`
 	ExchangeSettings ExchangeSettings `json:"-"`
 
-	FuncGetSettings  func() (ExchangeSettings, error)                            `json:"-"`
-	FuncGetOrderbook func(hit Hit) (Orderbook, error)                            `json:"-"`
-	FuncGetPortfolio func(settings ExchangeSettings) (Portfolio, error)          `json:"-"`
-	FuncPostOrder    func(order Order, settings ExchangeSettings) (Order, error) `json:"-"`
+	FuncGetSettings  func() (ExchangeSettings, error)                                      `json:"-"`
+	FuncGetOrderbook func(hit Hit) (Orderbook, error)                                      `json:"-"`
+	FuncGetPortfolio func(settings ExchangeSettings) (Portfolio, error)                    `json:"-"`
+	FuncPostOrder    func(order Order, settings ExchangeSettings) (OrderDispatched, error) `json:"-"`
 	// fnDeposit      func(client http.Client) (bool, error)
 	// fnWithdraw     func(client http.Client) (bool, error)
 }
@@ -47,7 +47,7 @@ func (e *Exchange) GetPortfolio() (Portfolio, error) {
 	return e.FuncGetPortfolio(e.ExchangeSettings)
 }
 
-func (e *Exchange) PostOrder(order Order) (Order, error) {
+func (e *Exchange) PostOrder(order Order) (OrderDispatched, error) {
 	return e.FuncPostOrder(order, e.ExchangeSettings)
 }
 

@@ -29,13 +29,16 @@ func (exec *Execution) Run() {
 
 	r := &exec.Report
 	r.IsExecutionSuccessful = true
-	r.Results = make([]string, len(r.Orders))
 	r.ExecutionStartedAt = time.Now()
 	r.PreExecutionPortfolioStateID = m.LastStateID
 
 	batch := networking.Batch{}
-	batch.PostOrders(r.Orders)
-	r.PostExecutionPortfolioStateID = m.LastStateID
+	batch.PostOrders(r.Orders, func(dispatched []core.OrderDispatched) {
+
+		r.DispatchedOrders = dispatched
+		r.PostExecutionPortfolioStateID = m.LastStateID
+		r.ExecutionEndedAt = time.Now()
+	})
 
 	// for i, o := range r.Orders {
 	// 	exchange := o.Hit.Endpoint.Exchange
@@ -50,8 +53,6 @@ func (exec *Execution) Run() {
 	// 		r.Results[i] = "hit" // Taker? Maker?
 	// 	}
 	// }
-
-	r.ExecutionEndedAt = time.Now()
 }
 
 func (exec *Execution) IsSuccessful() bool {

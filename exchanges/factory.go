@@ -19,7 +19,7 @@ type standardizedExchange interface {
 	GetSettings() func() (core.ExchangeSettings, error)
 	GetOrderbook() func(hit core.Hit) (core.Orderbook, error)
 	GetPortfolio() func(core.ExchangeSettings) (core.Portfolio, error)
-	PostOrder() func(core.Order, core.ExchangeSettings) (core.Order, error)
+	PostOrder() func(core.Order, core.ExchangeSettings) (core.OrderDispatched, error)
 	// Deposit(client http.Client) (bool, error)
 	// Withdraw(client http.Client) (bool, error)
 }
@@ -48,7 +48,7 @@ func (f *Factory) BuildExchange(name string) core.Exchange {
 		state := core.NewPortfolioStateFromPositions(portfolio.Positions)
 		manager.UpdateWithNewState(state, false)
 	} else {
-		fmt.Println(err)
+		fmt.Println("Error while fetching portfolio", err)
 	}
 	return exchange
 }

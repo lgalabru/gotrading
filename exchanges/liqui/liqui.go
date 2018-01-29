@@ -126,9 +126,12 @@ func (b Liqui) GetOrderbook() func(hit core.Hit) (core.Orderbook, error) {
 	}
 }
 
-func (b Liqui) PostOrder() func(order core.Order, settings core.ExchangeSettings) (core.Order, error) {
-	return func(order core.Order, settings core.ExchangeSettings) (core.Order, error) {
+func (b Liqui) PostOrder() func(order core.Order, settings core.ExchangeSettings) (core.OrderDispatched, error) {
+	return func(order core.Order, settings core.ExchangeSettings) (core.OrderDispatched, error) {
 		var err error
+
+		do := core.OrderDispatched{}
+		do.Order = &order
 
 		endpoint := order.Hit.Endpoint
 		from := string(endpoint.From)
@@ -174,13 +177,16 @@ func (b Liqui) PostOrder() func(order core.Order, settings core.ExchangeSettings
 		req, err := http.NewRequest("POST", liquiAPIPrivateURL, strings.NewReader(encoded))
 
 		if err != nil {
-			return order, err
+			return do, err
 		}
 		for k, v := range headers {
 			req.Header.Add(k, v)
 		}
 		gatling := networking.SharedGatling()
-		contents, err, _, _ := gatling.Send(req)
+		contents, err, start, end := gatling.Send(req)
+
+		do.SentAt = start
+		do.ConfirmedAt = end
 
 		type Return struct {
 			Received    float64            `json:"received"`
@@ -212,7 +218,7 @@ func (b Liqui) PostOrder() func(order core.Order, settings core.ExchangeSettings
 		manager := core.SharedPortfolioManager()
 		manager.UpdateWithNewState(state, false)
 
-		return order, err
+		return do, err
 	}
 }
 
@@ -249,11 +255,19 @@ func (b Liqui) GetPortfolio() func(settings core.ExchangeSettings) (core.Portfol
 		gatling := networking.SharedGatling()
 		contents, err, _, _ := gatling.Send(req)
 
+		if err != nil {
+			log.Println(err)
+		} else {
+			log.Println(contents)
+		}
+
 		type Return struct {
 			Funds map[string]float64 `json:"funds"`
 		}
 
 		type Response struct {
+			Sucess int    `json:"success"`
+			Error  string `json:"error"`
 			Return Return `json:"return"`
 		}
 
@@ -262,9 +276,12 @@ func (b Liqui) GetPortfolio() func(settings core.ExchangeSettings) (core.Portfol
 		err = json.Unmarshal(contents, &response)
 		if err != nil {
 			log.Println(err)
+		} else {
+			log.Println(response)
 		}
 
 		funds := response.Return.Funds
+		fmt.Println("->", funds)
 		for curr := range funds {
 			portfolio.UpdatePosition(settings.Name, core.Currency(strings.ToUpper(curr)), funds[curr])
 		}
