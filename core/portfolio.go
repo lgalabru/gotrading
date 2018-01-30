@@ -24,8 +24,8 @@ type PortfolioStateManager struct {
 
 // Portfolio wraps all your positions
 type PortfolioState struct {
-	StateID   string
-	Positions map[string]map[Currency]float64
+	StateID   string                          `json:"stateID"`
+	Positions map[string]map[Currency]float64 `json:"positions"`
 }
 
 // Portfolio wraps all your positions
@@ -98,10 +98,20 @@ func (m *PortfolioStateManager) UpdateWithNewState(state PortfolioState, overrid
 // Update position
 func (m *PortfolioStateManager) UpdateWithNewPosition(exch string, c Currency, amount float64) {
 	current := m.States[m.LastStateID]
-	current.UpdatePosition(exch, c, amount)
+	next := current.Copy()
+	next.UpdatePosition(exch, c, amount)
 	uuid := (uuid.NewV4()).String()
-	current.StateID = uuid
-	m.PushState(current)
+	next.StateID = uuid
+	m.PushState(next)
+}
+
+// Fork current state
+func (m *PortfolioStateManager) ForkCurrentState() PortfolioState {
+	current := m.States[m.LastStateID]
+	fork := current.Copy()
+	uuid := (uuid.NewV4()).String()
+	fork.StateID = uuid
+	return fork
 }
 
 // Update position
@@ -113,6 +123,20 @@ func (s *PortfolioState) UpdatePosition(exch string, c Currency, amount float64)
 		s.Positions[exch] = make(map[Currency]float64)
 	}
 	s.Positions[exch][c] = amount
+}
+
+// Copy state
+func (s *PortfolioState) Copy() PortfolioState {
+	copy := PortfolioState{}
+	copy.Positions = make(map[string]map[Currency]float64)
+
+	for exch := range s.Positions {
+		copy.Positions[exch] = make(map[Currency]float64)
+		for currency := range s.Positions[exch] {
+			copy.Positions[exch][currency] = s.Positions[exch][currency]
+		}
+	}
+	return copy
 }
 
 // Update position

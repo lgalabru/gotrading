@@ -28,14 +28,16 @@ type Report struct {
 	SimulationEndedAt             time.Time              `json:"simulationEndedAt"`
 	IsSimulationIncomplete        bool                   `json:"isSimulationIncomplete"`
 	IsSimulationSuccessful        bool                   `json:"isSimulationSuccessful"`
-	PreExecutionPortfolioStateID  string                 `json:"preExecutionPortfolioStateID"`
 	ExecutionStartedAt            time.Time              `json:"executionStartedAt"`
 	ExecutionEndedAt              time.Time              `json:"executionEndedAt"`
-	PostExecutionPortfolioStateID string                 `json:"postExecutionPortfolioStateID"`
 	IsExecutionSuccessful         bool                   `json:"isExecutionSuccessful"`
 	ValidationStartedAt           time.Time              `json:"validationStartedAt"`
 	ValidationEndedAt             time.Time              `json:"validationEndedAt"`
 	SimulationMinusExecution      float64                `json:"simulationMinusExecution"`
+	PreExecutionPortfolioStateID  string                 `json:"-"`
+	PostExecutionPortfolioStateID string                 `json:"-"`
+	PreExecutionPortfolioState    core.PortfolioState    `json:"statePreExecution"`
+	PostExecutionPortfolioState   core.PortfolioState    `json:"statePostExecution"`
 }
 
 func (r Report) Encode() ([]byte, error) {
@@ -54,6 +56,10 @@ func (r Report) Encode() ([]byte, error) {
 	h.Write([]byte(desc))
 	enc := hex.EncodeToString(h.Sum(nil))
 	r.Id = &enc
+
+	r.PreExecutionPortfolioState = core.SharedPortfolioManager().States[r.PreExecutionPortfolioStateID]
+	r.PostExecutionPortfolioState = core.SharedPortfolioManager().States[r.PostExecutionPortfolioStateID]
+
 	return json.Marshal(r)
 }
 

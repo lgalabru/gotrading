@@ -211,12 +211,12 @@ func (b Liqui) PostOrder() func(order core.Order, settings core.ExchangeSettings
 		order.Progress = response.Return.Received / amount
 		funds := response.Return.Funds
 
-		state := core.NewPortfolioState()
+		manager := core.SharedPortfolioManager()
+		state := manager.ForkCurrentState()
 		for curr := range funds {
 			state.UpdatePosition(settings.Name, core.Currency(strings.ToUpper(curr)), funds[curr])
 		}
-		manager := core.SharedPortfolioManager()
-		manager.UpdateWithNewState(state, false)
+		manager.PushState(state)
 
 		return do, err
 	}
