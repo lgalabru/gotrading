@@ -15,10 +15,13 @@ var _ = Describe("Order", func() {
 		order = Order{}
 	})
 
-	Describe("Getting started with ginko", func() {
-		Context("With 101 test", func() {
-			It("should work", func() {
-				Expect(1).To(Equal(1))
+	Describe("Testing Order", func() {
+		Context("Considering orders with fees", func() {
+			It("should return the correct volume out", func() {
+				o := Order{}
+				o.InitBid(0.00000561, 23.73927493)
+				o.updateVolumesInOut()
+				Expect(o.BaseVolumeOut).To(Equal(23.679926742675))
 			})
 		})
 	})

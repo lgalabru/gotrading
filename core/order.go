@@ -1,6 +1,8 @@
 package core
 
-import "errors"
+import (
+	"errors"
+)
 
 // OrderTransactionType describes the transaction type: Bid / Ask
 type OrderTransactionType uint
@@ -82,14 +84,14 @@ func (o *Order) UpdateQuoteVolume(quoteVolume float64) {
 func (o *Order) updateVolumesInOut() {
 	if o.TransactionType == Bid {
 		o.BaseVolumeIn = 0
-		o.QuoteVolumeIn = o.QuoteVolume
-		o.BaseVolumeOut = o.BaseVolume - o.BaseVolume*o.TakerFee
+		o.QuoteVolumeIn = Trunc8(o.QuoteVolume)
+		o.BaseVolumeOut = Trunc8(o.BaseVolume - o.BaseVolume*o.TakerFee)
 		o.QuoteVolumeOut = 0
 	} else if o.TransactionType == Ask {
-		o.BaseVolumeIn = o.BaseVolume
+		o.BaseVolumeIn = Trunc8(o.BaseVolume)
 		o.QuoteVolumeIn = 0
 		o.BaseVolumeOut = 0
-		o.QuoteVolumeOut = o.QuoteVolume - o.QuoteVolume*o.TakerFee
+		o.QuoteVolumeOut = Trunc8(o.QuoteVolume - o.QuoteVolume*o.TakerFee)
 	}
 }
 

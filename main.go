@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"strconv"
 	"strings"
 
@@ -47,31 +48,52 @@ func main() {
 	publisher.Init(viper.GetStringMapString("strategies.arbitrage.reporting.publisher"))
 	defer publisher.Close()
 
+	manager := core.SharedPortfolioManager()
+	i := manager.CurrentPosition("Liqui", core.Currency("BTC"))
+	fmt.Println(i)
+	fmt.Println("----")
+	forceExecution := viper.GetBool("strategies.arbitrage.forceExecution")
+
 	for {
 		treeOfPossibles.DepthTraversing(func(hits []*core.Hit) {
+
 			sim := arbitrage.Simulation{}
 			sim.Init(hits)
 			sim.Run()
-			if sim.IsSuccessful() == false {
-				// if sim.IsExecutable() == false {
-				go publisher.Send(sim.Report)
+
+			if forceExecution == true {
+				if sim.IsExecutable() == false {
+					return
+				}
+
+				exec := arbitrage.Execution{}
+				exec.Init(sim)
+				exec.Run()
+
+				valid := arbitrage.Validation{}
+				valid.Init(exec)
+				valid.Run()
+				publisher.Send(valid.Report)
+
+				os.Exit(3)
+			} else {
+				if sim.IsSuccessful() == false {
+					return
+				}
+				exec := arbitrage.Execution{}
+				exec.Init(sim)
+				exec.Run()
+				// if exec.IsSuccessful() == false {
+				// 	go publisher.Send(exec.Report)
+				// 	// Recovery? Rollback?
+				// 	return
 				// }
-				return
-			}
 
-			exec := arbitrage.Execution{}
-			exec.Init(sim)
-			exec.Run()
-			if exec.IsSuccessful() == false {
-				go publisher.Send(exec.Report)
-				// Recovery? Rollback?
-				return
+				valid := arbitrage.Validation{}
+				valid.Init(exec)
+				valid.Run()
+				publisher.Send(valid.Report)
 			}
-
-			valid := arbitrage.Validation{}
-			valid.Init(exec)
-			valid.Run()
-			go publisher.Send(valid.Report)
 		})
 	}
 }

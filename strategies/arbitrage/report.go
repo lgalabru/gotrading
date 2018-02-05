@@ -11,10 +11,13 @@ import (
 )
 
 type Report struct {
-	Id                            *string                `json:"id"`
+	ID                            *string                `json:"id"`
+	Title                         string                 `json:"title"`
 	Orders                        []core.Order           `json:"orders"`
 	DispatchedOrders              []core.OrderDispatched `json:"dispatchedOrders"`
 	Performance                   float64                `json:"performance"`
+	SimulatedProfit               float64                `json:"simulatedProfit"`
+	Profit                        float64                `json:"profit"`
 	Rates                         []float64              `json:"rates"`
 	AdjustedVolumes               []float64              `json:"volumes"`
 	VolumeToEngage                float64                `json:"volumeToEngage"`
@@ -47,7 +50,7 @@ func (r Report) Encode() ([]byte, error) {
 		if o.Hit == nil {
 			return nil, fmt.Errorf("Order incomplete")
 		}
-		desc = desc + " -> " + o.Hit.Endpoint.Description()
+		desc = desc + " / " + o.Hit.Endpoint.Description()
 		if o.Hit.Endpoint.Orderbook.StartedLastUpdateAt.Before(r.SimulationFetchingStartedAt) {
 			r.SimulationFetchingStartedAt = o.Hit.Endpoint.Orderbook.StartedLastUpdateAt
 		}
@@ -55,8 +58,8 @@ func (r Report) Encode() ([]byte, error) {
 	h := sha1.New()
 	h.Write([]byte(desc))
 	enc := hex.EncodeToString(h.Sum(nil))
-	r.Id = &enc
-
+	r.ID = &enc
+	r.Title = desc
 	r.PreExecutionPortfolioState = core.SharedPortfolioManager().States[r.PreExecutionPortfolioStateID]
 	r.PostExecutionPortfolioState = core.SharedPortfolioManager().States[r.PostExecutionPortfolioStateID]
 

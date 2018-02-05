@@ -46,9 +46,7 @@ func (sim *Simulation) Run() {
 			orderbook := orderbooks[i]
 			n.Endpoint.Orderbook = orderbook
 			if orderbook == nil {
-				r.IsSimulationSuccessful = false
-				r.SimulationEndedAt = time.Now()
-				r.IsSimulationIncomplete = true
+				sim.Abort()
 				return
 			}
 
@@ -66,15 +64,11 @@ func (sim *Simulation) Run() {
 						priceOfCurrencyToSell = order.Price
 						volumeOfCurrencyToSell = order.BaseVolume
 					} else {
-						r.IsSimulationSuccessful = false
-						r.SimulationEndedAt = time.Now()
-						r.IsSimulationIncomplete = true
+						sim.Abort()
 						return
 					}
 				} else {
-					r.IsSimulationSuccessful = false
-					r.SimulationEndedAt = time.Now()
-					r.IsSimulationIncomplete = true
+					sim.Abort()
 					return
 				}
 			} else {
@@ -87,15 +81,11 @@ func (sim *Simulation) Run() {
 						priceOfCurrencyToSell = order.PriceOfQuoteToBase
 						volumeOfCurrencyToSell = order.QuoteVolume
 					} else {
-						r.IsSimulationSuccessful = false
-						r.SimulationEndedAt = time.Now()
-						r.IsSimulationIncomplete = true
+						sim.Abort()
 						return
 					}
 				} else {
-					r.IsSimulationSuccessful = false
-					r.SimulationEndedAt = time.Now()
-					r.IsSimulationIncomplete = true
+					sim.Abort()
 					return
 				}
 			}
@@ -103,11 +93,13 @@ func (sim *Simulation) Run() {
 			fromInitialToCurrent = fromInitialToCurrent * priceOfCurrencyToSell
 			r.Rates[i] = fromInitialToCurrent
 			r.Performance = fromInitialToCurrent
+			decimals := n.Endpoint.Exchange.ExchangeSettings.PairsSettings[orderbook.CurrencyPair].DecimalPlaces
 
 			if i == 0 {
 				initialBalance := m.CurrentPosition(n.Endpoint.Exchange.Name, n.SoldCurrency)
 				initialBalance = initialBalance - (initialBalance * 0.25)
-				r.VolumeToEngage = math.Min(initialBalance, volumeOfCurrencyToSell)
+				volumeToCeil := math.Min(initialBalance, volumeOfCurrencyToSell)
+				r.VolumeToEngage = ceilf(volumeToCeil, decimals)
 			} else {
 				limitingAmount := r.VolumeToEngage * fromInitialToCurrent
 				currentAmount := volumeOfCurrencyToSell * priceOfCurrencyToSell
@@ -157,6 +149,8 @@ func (sim *Simulation) Run() {
 		}
 
 		fmt.Println(r.VolumeIn, r.VolumeOut)
+		r.SimulatedProfit = core.Trunc8(r.VolumeOut - r.VolumeIn)
+
 		if r.VolumeIn < 0.0001 || r.VolumeOut < 0.0001 {
 			fmt.Println("Traded volume under threshold")
 			r.IsTradedVolumeEnough = false
@@ -167,8 +161,20 @@ func (sim *Simulation) Run() {
 		r.IsTradedVolumeEnough = true
 		r.Performance = r.VolumeOut / r.VolumeIn
 		r.SimulationEndedAt = time.Now()
-		r.IsSimulationSuccessful = r.Performance > 1.0
+		r.IsSimulationSuccessful = r.SimulatedProfit > 0.0
 	})
+}
+
+func ceilf(v float64, d int) float64 {
+	df := float64(d)
+	return math.Ceil(v*math.Pow(10, df)) / math.Pow(10, df)
+}
+
+func (sim *Simulation) Abort() {
+	r := &sim.Report
+	r.IsSimulationSuccessful = false
+	r.SimulationEndedAt = time.Now()
+	r.IsSimulationIncomplete = true
 }
 
 func (sim *Simulation) IsSuccessful() bool {

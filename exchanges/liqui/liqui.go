@@ -150,8 +150,9 @@ func (b Liqui) PostOrder() func(order core.Order, settings core.ExchangeSettings
 			orderType = "buy"
 			amount = order.QuoteVolumeIn / order.Price
 		}
+
 		rate := order.Price
-		amount = math.Ceil(amount*math.Pow(10, decimals)) / math.Pow(10, decimals)
+		amount = math.Trunc(amount*math.Pow(10, decimals)) / math.Pow(10, decimals)
 
 		nonce := int(settings.Nonce.GetInc())
 

@@ -122,7 +122,7 @@ func (s *PortfolioState) UpdatePosition(exch string, c Currency, amount float64)
 	if s.Positions[exch] == nil {
 		s.Positions[exch] = make(map[Currency]float64)
 	}
-	s.Positions[exch][c] = amount
+	s.Positions[exch][c] = Trunc8(amount)
 }
 
 // Copy state
@@ -147,5 +147,5 @@ func (s *Portfolio) UpdatePosition(exch string, c Currency, amount float64) {
 	if s.Positions[exch] == nil {
 		s.Positions[exch] = make(map[Currency]float64)
 	}
-	s.Positions[exch][c] = amount
+	s.Positions[exch][c] = Trunc8(amount)
 }
