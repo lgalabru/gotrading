@@ -93,7 +93,7 @@ func (sim *Simulation) Run() {
 			fromInitialToCurrent = fromInitialToCurrent * priceOfCurrencyToSell
 			r.Rates[i] = fromInitialToCurrent
 			r.Performance = fromInitialToCurrent
-			decimals := n.Endpoint.Exchange.ExchangeSettings.PairsSettings[orderbook.CurrencyPair].DecimalPlaces
+			decimals := n.Endpoint.Exchange.ExchangeSettings.PairsSettings[orderbook.CurrencyPair].BasePrecision
 
 			if i == 0 {
 				initialBalance := m.CurrentPosition(n.Endpoint.Exchange.Name, n.SoldCurrency)

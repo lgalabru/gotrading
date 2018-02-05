@@ -42,9 +42,19 @@ type Liqui struct {
 func (b Liqui) GetSettings() func() (core.ExchangeSettings, error) {
 	return func() (core.ExchangeSettings, error) {
 
+		type pairsSettings struct {
+			DecimalPlaces int     `json:"decimal_places"`
+			MinPrice      float64 `json:"min_price"`
+			MaxPrice      float64 `json:"max_price"`
+			MinAmount     float64 `json:"min_amount"`
+			MaxAmount     float64 `json:"max_amount"`
+			MinTotal      float64 `json:"min_total"`
+			Fee           float64 `json:"fee"`
+		}
+
 		type Response struct {
-			ServerTime    int                                  `json:"server_time"`
-			PairsSettings map[string]core.CurrencyPairSettings `json:"pairs"`
+			ServerTime    int                      `json:"server_time"`
+			PairsSettings map[string]pairsSettings `json:"pairs"`
 		}
 
 		response := Response{}
@@ -72,7 +82,15 @@ func (b Liqui) GetSettings() func() (core.ExchangeSettings, error) {
 			quote := core.Currency(currs[1])
 			pair := core.CurrencyPair{Base: base, Quote: quote}
 			settings.AvailablePairs[i] = pair
-			settings.PairsSettings[pair] = response.PairsSettings[key]
+
+			cps := core.CurrencyPairSettings{}
+			cps.BasePrecision = response.PairsSettings[key].DecimalPlaces
+			cps.QuotePrecision = response.PairsSettings[key].DecimalPlaces
+			cps.MinAmount = response.PairsSettings[key].MinAmount
+			cps.MaxAmount = response.PairsSettings[key].MaxAmount
+			cps.MinPrice = response.PairsSettings[key].MinPrice
+			cps.MaxPrice = response.PairsSettings[key].MaxPrice
+			settings.PairsSettings[pair] = cps
 			i++
 		}
 		return settings, err
@@ -141,7 +159,7 @@ func (b Liqui) PostOrder() func(order core.Order, settings core.ExchangeSettings
 
 		var orderType string
 		var amount float64
-		decimals := float64(settings.PairsSettings[pair].DecimalPlaces)
+		decimals := float64(settings.PairsSettings[pair].BasePrecision)
 
 		if order.TransactionType == core.Ask {
 			orderType = "sell"

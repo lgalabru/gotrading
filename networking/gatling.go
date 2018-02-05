@@ -144,6 +144,12 @@ func (g *Gatling) Send(request *http.Request) ([]byte, error, time.Time, time.Ti
 		return nil, err, start, time.Now()
 	}
 
+	// resDump, err := httputil.DumpResponse(res, true)
+	// if err != nil {
+	// 	fmt.Println(err)
+	// }
+	// fmt.Println(string(resDump))
+
 	if res.StatusCode != 200 {
 		return nil, fmt.Errorf("common.SendHTTPGetRequest() error: HTTP status code %d", res.StatusCode), start, time.Now()
 	}

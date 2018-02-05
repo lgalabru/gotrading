@@ -7,11 +7,12 @@ type CurrencyPair struct {
 }
 
 type CurrencyPairSettings struct {
-	DecimalPlaces int     `json:"decimal_places"`
-	MinPrice      float64 `json:"min_price"`
-	MaxPrice      float64 `json:"max_price"`
-	MinAmount     float64 `json:"min_amount"`
-	MaxAmount     float64 `json:"max_amount"`
-	MinTotal      float64 `json:"min_total"`
-	Fee           float64 `json:"fee"`
+	BasePrecision  int     `json:"basePrecision"`
+	QuotePrecision int     `json:"quotePrecision"`
+	MinPrice       float64 `json:"minPrice"`
+	MaxPrice       float64 `json:"maxPrice"`
+	MinAmount      float64 `json:"minAmount"`
+	MaxAmount      float64 `json:"maxAmount"`
+	MinTotal       float64 `json:"minTotal"`
+	Fee            float64 `json:"fee"`
 }
