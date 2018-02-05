@@ -5,24 +5,17 @@ import (
 	"fmt"
 	"gotrading/core"
 	"gotrading/networking"
+	"log"
 	"strconv"
+	"strings"
 
 	jsoniter "github.com/json-iterator/go"
 )
 
 const (
-	hostURL           = "https://api.binance.com/api/v1"
-	exchangeInfo      = "exchangeInfo"
-	liquiTicker       = "ticker"
-	liquiDepth        = "depth"
-	liquiTrades       = "trades"
-	liquiGetInfo      = "getInfo"
-	liquiTrade        = "Trade"
-	liquiActiveOrders = "ActiveOrders"
-	liquiOrderInfo    = "OrderInfo"
-	liquiCancelOrder  = "CancelOrder"
-	liquiTradeHistory = "TradeHistory"
-	liquiWithdrawCoin = "WithdrawCoin"
+	hostURL      = "https://api.binance.com/api/v1"
+	exchangeInfo = "exchangeInfo"
+	depth        = "depth"
 )
 
 type Binance struct {
@@ -85,10 +78,50 @@ func (b Binance) GetSettings() func() (core.ExchangeSettings, error) {
 
 func (b Binance) GetOrderbook() func(hit core.Hit) (core.Orderbook, error) {
 	return func(hit core.Hit) (core.Orderbook, error) {
-		var ob core.Orderbook
 		var err error
-		fmt.Println("Getting Orderbooks from Binance")
-		return ob, err
+
+		type Response struct {
+			Asks [][2]string `json:"asks"`
+			Bids [][2]string `json:"bids"`
+		}
+
+		response := Response{}
+		endpoint := hit.Endpoint
+		dst := &core.Orderbook{}
+		dst.CurrencyPair = core.CurrencyPair{Base: endpoint.From, Quote: endpoint.To}
+		curr := strings.ToUpper(fmt.Sprintf("%s%s", endpoint.From, endpoint.To))
+
+		depthValue := 5
+		req := fmt.Sprintf("%s/%s?symbol=%s&limit=%d", hostURL, depth, curr, depthValue)
+
+		gatling := networking.SharedGatling()
+		contents, err, start, end := gatling.GET(req)
+		var json = jsoniter.ConfigCompatibleWithStandardLibrary
+		err = json.Unmarshal(contents, &response)
+		if err != nil {
+			log.Println(string(contents[:]))
+		}
+
+		if err == nil {
+			dst.Bids = make([]core.Order, depthValue)
+			dst.Asks = make([]core.Order, depthValue)
+			dst.StartedLastUpdateAt = start
+			dst.EndedLastUpdateAt = end
+
+			for i, ask := range response.Asks {
+				p, _ := strconv.ParseFloat(ask[0], 64)
+				v, _ := strconv.ParseFloat(ask[1], 64)
+				dst.Asks[i] = core.NewAsk(p, v)
+			}
+			for i, bid := range response.Bids {
+				p, _ := strconv.ParseFloat(bid[0], 64)
+				v, _ := strconv.ParseFloat(bid[1], 64)
+				dst.Bids[i] = core.NewBid(p, v)
+			}
+		} else {
+			fmt.Println("Error", endpoint.Description(), err)
+		}
+		return *dst, err
 	}
 }
 
