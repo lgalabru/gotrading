@@ -148,6 +148,10 @@ func (g *Gatling) Send(request *http.Request) ([]byte, error, time.Time, time.Ti
 	// if err != nil {
 	// 	fmt.Println(err)
 	// }
+	// reqDump, _ := httputil.DumpRequest(request, true)
+
+	// fmt.Println(string(reqDump))
+	// fmt.Println("==========")
 	// fmt.Println(string(resDump))
 
 	if res.StatusCode != 200 {

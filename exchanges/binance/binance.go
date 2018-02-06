@@ -1,21 +1,28 @@
 package binance
 
 import (
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"gotrading/core"
 	"gotrading/networking"
 	"log"
+	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
+	"time"
 
 	jsoniter "github.com/json-iterator/go"
 )
 
 const (
-	hostURL      = "https://api.binance.com/api/v1"
+	hostURL      = "https://api.binance.com/api"
 	exchangeInfo = "exchangeInfo"
 	depth        = "depth"
+	account      = "account"
 )
 
 type Binance struct {
@@ -43,7 +50,7 @@ func (b Binance) GetSettings() func() (core.ExchangeSettings, error) {
 		settings := core.ExchangeSettings{}
 		gatling := networking.SharedGatling()
 
-		url := fmt.Sprintf("%s/%s", hostURL, exchangeInfo)
+		url := fmt.Sprintf("%s/v1/%s", hostURL, exchangeInfo)
 
 		contents, err, _, _ := gatling.GET(url)
 		var json = jsoniter.ConfigCompatibleWithStandardLibrary
@@ -92,7 +99,7 @@ func (b Binance) GetOrderbook() func(hit core.Hit) (core.Orderbook, error) {
 		curr := strings.ToUpper(fmt.Sprintf("%s%s", endpoint.From, endpoint.To))
 
 		depthValue := 5
-		req := fmt.Sprintf("%s/%s?symbol=%s&limit=%d", hostURL, depth, curr, depthValue)
+		req := fmt.Sprintf("%s/v1/%s?symbol=%s&limit=%d", hostURL, depth, curr, depthValue)
 
 		gatling := networking.SharedGatling()
 		contents, err, start, end := gatling.GET(req)
@@ -127,10 +134,72 @@ func (b Binance) GetOrderbook() func(hit core.Hit) (core.Orderbook, error) {
 
 func (b Binance) GetPortfolio() func(settings core.ExchangeSettings) (core.Portfolio, error) {
 	return func(settings core.ExchangeSettings) (core.Portfolio, error) {
-		var p core.Portfolio
-		var err error
-		fmt.Println("Getting Portfolio from Binance")
-		return p, err
+		portfolio := core.Portfolio{}
+
+		timestamp := time.Now().Unix() * 1000
+
+		values := url.Values{}
+		values.Set("timestamp", fmt.Sprintf("%d", timestamp))
+
+		mac := hmac.New(sha256.New, []byte(settings.APISecret))
+		_, err := mac.Write([]byte(values.Encode()))
+		if err != nil {
+			return portfolio, err
+		}
+		signature := hex.EncodeToString(mac.Sum(nil))
+
+		url := fmt.Sprintf("%s/v3/%s?%s&signature=%s", hostURL, account, values.Encode(), signature)
+		req, err := http.NewRequest("GET", url, nil)
+
+		if err != nil {
+			return portfolio, err
+		}
+
+		req.Header.Add("X-MBX-APIKEY", settings.APIKey)
+
+		gatling := networking.SharedGatling()
+		contents, err, _, _ := gatling.Send(req)
+
+		if err != nil {
+			log.Println(err)
+		}
+
+		type Balamce struct {
+			Asset  string `json:"asset"`
+			Free   string `json:"free"`
+			Locked string `json:"locked"`
+		}
+
+		type Response struct {
+			MakerCommission  int       `json:"makerCommission"`
+			TakerCommission  int       `json:"takerCommission"`
+			BuyerCommission  int       `json:"buyerCommission"`
+			SellerCommission int       `json:"sellerCommission"`
+			CanTrade         bool      `json:"canTrade"`
+			CanWithdraw      bool      `json:"canWithdraw"`
+			UpdateTime       int       `json:"updateTime"`
+			Balances         []Balamce `json:"balances"`
+		}
+
+		response := Response{}
+		var json = jsoniter.ConfigCompatibleWithStandardLibrary
+		err = json.Unmarshal(contents, &response)
+		if err != nil {
+			log.Println(err)
+		} else {
+			log.Println(response)
+		}
+
+		balances := response.Balances
+		for _, balance := range balances {
+			curr := core.Currency(balance.Asset)
+			position, _ := strconv.ParseFloat(balance.Free, 64)
+			portfolio.UpdatePosition(settings.Name, curr, position)
+		}
+
+		fmt.Println(portfolio)
+
+		return portfolio, err
 	}
 }
 
