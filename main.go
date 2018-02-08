@@ -77,22 +77,24 @@ func main() {
 
 				os.Exit(3)
 			} else {
-				if sim.IsSuccessful() == false {
+				if sim.IsExecutable() == false {
 					return
 				}
-				exec := arbitrage.Execution{}
-				exec.Init(sim)
-				exec.Run()
+				go publisher.Send(sim.Report)
+
+				// exec := arbitrage.Execution{}
+				// exec.Init(sim)
+				// exec.Run()
 				// if exec.IsSuccessful() == false {
 				// 	go publisher.Send(exec.Report)
 				// 	// Recovery? Rollback?
 				// 	return
 				// }
 
-				valid := arbitrage.Validation{}
-				valid.Init(exec)
-				valid.Run()
-				publisher.Send(valid.Report)
+				// valid := arbitrage.Validation{}
+				// valid.Init(exec)
+				// valid.Run()
+				// publisher.Send(valid.Report)
 			}
 		})
 	}

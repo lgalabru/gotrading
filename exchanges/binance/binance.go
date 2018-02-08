@@ -197,7 +197,9 @@ func (b Binance) GetPortfolio() func(settings core.ExchangeSettings) (core.Portf
 			portfolio.UpdatePosition(settings.Name, curr, position)
 		}
 
-		fmt.Println(portfolio)
+		curr := core.Currency("BTC")
+		position := 100.0
+		portfolio.UpdatePosition(settings.Name, curr, position)
 
 		return portfolio, err
 	}

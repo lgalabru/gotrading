@@ -36,7 +36,7 @@ func SharedGatling() *Gatling {
 func (g *Gatling) warmUp() {
 
 	g.LastRequestFromClientToHostOccuredAt = make(map[*http.Client]map[string]time.Time)
-	g.DefaultMaxRequestsPerSecondsForHost = 3
+	g.DefaultMaxRequestsPerSecondsForHost = 10
 	g.Mutexes = make(map[*http.Client]sync.RWMutex)
 
 	addrs, _ := net.InterfaceAddrs()

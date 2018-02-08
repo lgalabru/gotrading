@@ -61,7 +61,7 @@ func NewBid(price float64, baseVolume float64) Order {
 func (o *Order) Init(price float64, baseVolume float64) {
 	o.Price = price
 	o.PriceOfQuoteToBase = 1 / price
-	o.TakerFee = 0.25 / 100
+	o.TakerFee = 0.10 / 100
 	o.UpdateBaseVolume(baseVolume)
 }
 

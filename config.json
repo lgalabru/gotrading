@@ -17,11 +17,12 @@
   },
   "strategies": {
     "arbitrage": {
+      "forceExecution": false,
       "hits_per_sec": 4,
       "from_currency": "BTC",
       "to_currency": "BTC",
       "shifts_count": 3,
-      "exchanges_enabled": "Liqui",
+      "exchanges_enabled": "Binance",
       "exchange_crossing_enabled": false,
       "exchanges": {
         "Liqui": {
