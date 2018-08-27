@@ -82,19 +82,19 @@ func main() {
 				}
 				go publisher.Send(sim.Report)
 
-				// exec := arbitrage.Execution{}
-				// exec.Init(sim)
-				// exec.Run()
-				// if exec.IsSuccessful() == false {
-				// 	go publisher.Send(exec.Report)
-				// 	// Recovery? Rollback?
-				// 	return
-				// }
+				exec := arbitrage.Execution{}
+				exec.Init(sim)
+				exec.Run()
+				if exec.IsSuccessful() == false {
+					go publisher.Send(exec.Report)
+					// Recovery? Rollback?
+					return
+				}
 
-				// valid := arbitrage.Validation{}
-				// valid.Init(exec)
-				// valid.Run()
-				// publisher.Send(valid.Report)
+				valid := arbitrage.Validation{}
+				valid.Init(exec)
+				valid.Run()
+				publisher.Send(valid.Report)
 			}
 		})
 	}
